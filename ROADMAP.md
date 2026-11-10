@@ -4,7 +4,7 @@ Ordering principle: reach a **working vertical slice** fast. The slice is one pi
 
 Where a later milestone's items are needed by the slice, a thin version is pulled forward, and each milestone says what it defers.
 
-Status of every milestone: **Not started** (see [CURRENT.md](CURRENT.md)).
+Status of every milestone: Milestone 1 **In progress** (implemented on branch `feature/repo-foundation`, pending review); all others **Not started** (see [CURRENT.md](CURRENT.md)).
 
 ---
 

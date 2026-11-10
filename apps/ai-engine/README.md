@@ -1,6 +1,6 @@
 # apps/ai-engine — Python + FastAPI AI orchestration
 
-**Status: not started** (see [CURRENT.md](../../CURRENT.md)). Scaffolded in Milestone 1.
+**Status: skeleton** (Milestone 1; see [CURRENT.md](../../CURRENT.md)). Implemented: `GET /health`, request_id handling and OpenTelemetry (continues the api trace). No pipeline yet.
 
 Runs the deterministic answer pipeline ([AI_ENGINEERING.md](../../AI_ENGINEERING.md)). It owns LLM and embedding provider access, versioned prompts and the evaluation suite.
 

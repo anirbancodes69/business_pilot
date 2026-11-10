@@ -2,17 +2,24 @@
 
 > Living document. Update it after every meaningful change (see [CLAUDE.md](CLAUDE.md)). Only list something as Implemented if it exists in the repository and has been run or tested.
 
-**Project status:** Architecture and documentation initialization. **Application development has not started.**
+**Project status:** Milestone 1 (repository foundation) is implemented on branch `feature/repo-foundation` and awaits review and merge. Only skeletons exist: health endpoints, telemetry and infrastructure. **No product feature exists.**
 
-**Current milestone:** Pre-Milestone 1. The documentation foundation is complete and audited; [Milestone 1](ROADMAP.md#milestone-1--repository-foundation-and-infrastructure) has not started.
+**Current milestone:** [Milestone 1](ROADMAP.md#milestone-1--repository-foundation-and-infrastructure), in review.
 
-**Last updated:** 2026-11-11 (after the product owner confirmed the stack, Kysely and Node 24)
+**Last updated:** 2026-11-11 (Milestone 1 implemented locally)
 
 ## Implemented
 
-- **Application: nothing.** No application, infrastructure or test code exists. `apps/*`, `packages/*` and `infrastructure/*` contain only README placeholders.
+- **Milestone 1 skeletons (run locally on 2026-11-11, not yet merged or run on GitHub):**
+  - pnpm workspace (`apps/web`, `apps/api`) plus a uv project (`apps/ai-engine`); shared ESLint, Prettier, ruff, mypy strict.
+  - `apps/api` (NestJS): HTTP entrypoint with `/health/live` and `/health/ready` (checks Postgres and ai-engine); worker entrypoint with a health port only (no BullMQ yet); Zod config; request_id middleware; OpenTelemetry; Kysely and `pg` set up in `src/platform/database` with a migrator runner and an empty migrations folder (no tables); ESLint rule restricting `pg`, `kysely` and Redis clients to `src/platform`.
+  - `apps/ai-engine` (FastAPI): `/health`, request_id, OpenTelemetry continuing the api trace. No DB or Redis clients.
+  - `apps/web` (Next.js): app shell and `/api/health`.
+  - `infrastructure/docker/compose.yaml`: postgres 16, Redis Stack (`noeviction`, AOF, password), minio, web, api, worker, ai-engine, optional `observability` profile. Verified: `up --wait` brought all 8 services healthy, with Redis settings, the `bp_app` role (no superuser, no BYPASSRLS) and the migrator checked.
+  - Trace verified: one Tempo trace spans `bp-api` (GET) → `ai-engine.health` → `bp-ai-engine` (GET /health), and `request_id` is the same on all three spans.
+  - `pnpm lint`, `pnpm typecheck`, `pnpm test` (13 api, 1 web, 3 ai-engine tests) and `pnpm build` pass. `pnpm audit --prod` shows one moderate finding; `pip-audit` shows none.
 - Documentation (including the AI development workflow), ADRs, interface contracts and configuration schemas (Markdown and JSON Schema, draft v0). These are designs, not working software.
-- `.github/workflows/ci.yml` has run on GitHub (2 runs; the latest, commit c874fdc, passed). It only checks that the required documents exist, that relative Markdown links resolve, that the JSON files are valid JSON, and that `.env.example` holds placeholders. The link check was added on 2026-11-11 and has not run on GitHub yet.
+- `.github/workflows/ci.yml`: the documentation job ran on GitHub (latest run on commit c874fdc passed). The Milestone 1 jobs (apps, secret scan, dependency audit, Compose smoke) and the link check are written but **have not run on GitHub**. The equivalent commands were run locally, except gitleaks, which was not run.
 - Verified locally on 2026-11-11: all JSON files parse and all relative Markdown links resolve (checked with the CI script).
 
 ## Designed (documented, not implemented)
@@ -45,17 +52,24 @@
 
 ## In progress
 
-- Nothing.
+- Review and merge of `feature/repo-foundation` (Milestone 1). Nothing is committed yet.
 
 ## Pending (next milestones)
 
-- Milestone 1: Dockerized repository foundation (git, pnpm workspace, NestJS and FastAPI skeletons, Docker Compose with PostgreSQL, Redis and MinIO, CI running lint and tests).
+- Milestone 1 leftovers: first CI run on GitHub; Kysely table-type method (chosen with the first migration); `pnpm stack:up` was not run against the real `.env` (verified with an equivalent throwaway env file).
 - Milestone 2: Tenant management, authentication integration, RLS and the tenant isolation test harness.
 - Milestones 3–10: see [ROADMAP.md](ROADMAP.md).
 
 ## Known issues and risks
 
-- **Local toolchain (macOS arm64, checked 2026-11-11):** Docker 29 and Compose v2 are present. pnpm and uv are not installed (`corepack enable` provides pnpm). Python is 3.14; pin 3.12 through uv. Node is 24, which now matches the decision.
+- **MinIO images are gone (found 2026-11-11):** `minio/minio` on Docker Hub, `quay.io/minio/minio` and `dl.min.io` binaries are no longer available. Compose uses `bitnamilegacy/minio:2025.7.23-debian-12-r3`, a frozen and unmaintained mirror, for local development only. ADR-0008 and E1.3 name MinIO. The product owner should choose a supported S3-compatible store, or build MinIO from source, before Model B or production. Not decided here.
+- **Local Postgres `bp_owner` is a superuser** (image bootstrap role). M2 must create a non-superuser owner and the full role model.
+- The worker readiness checks Postgres only. Redis is not checked because no Redis client exists yet (the BullMQ setup adds it inside `platform`).
+- `apps/web` has no Next.js ESLint plugin (kept to the shared typescript-eslint config to avoid extra dependencies).
+- Corepack cannot run pnpm 12 (native binary). `packageManager` is pinned to pnpm 10.34.9. Revisit later.
+- `pnpm audit` reports one moderate advisory in a transitive dependency. `zod` is on 4.x because 3.x had a high advisory; `postcss` is forced by a pnpm override because Next bundles a vulnerable range.
+
+- **Local toolchain (macOS arm64, 2026-11-11):** Docker 29, Compose v2, Node 24, pnpm 10.34.9 (via corepack, shim in `~/.local/bin`) and uv 0.13.7 (Homebrew) are installed. Python 3.12 is provided by uv.
 - [BusinessPilot_New_System_Setup_and_Implementation_Guide.md](BusinessPilot_New_System_Setup_and_Implementation_Guide.md) conflicts with the repo docs: it says to avoid host runtimes (DEVELOPMENT.md needs them), puts authentication in M1 (ROADMAP puts it in M2) and mentions a "SQL-validation flow" (the design uses query plans, P-03). Treat ROADMAP.md as authoritative. Decide whether to move the guide to `docs/` or delete it.
 - OPEN decisions that block specific milestones:
   - In M2: identity provider (D-OPEN-03) and service authentication / RequestContext signing (D-OPEN-15).
@@ -74,6 +88,6 @@ See [DECISIONS.md](DECISIONS.md): 13 Accepted, 15 Proposed, 17 OPEN. In summary:
 
 ## Next three actionable tasks
 
-1. **Repository foundation (M1a):** pnpm workspace on Node 24; Kysely in the api; `apps/api` NestJS skeleton with HTTP and worker entrypoints and a health endpoint; `apps/ai-engine` FastAPI skeleton (uv) with a health endpoint; `apps/web` Next.js skeleton; `infrastructure/docker/compose.yaml` with PostgreSQL, Redis Stack (`noeviction`, AOF) and MinIO.
-2. **CI baseline:** extend `.github/workflows/ci.yml` to lint, type-check and test all apps. Add secret scanning and dependency audit.
-3. **Tenant isolation foundation:** migrations for `tenant`, `app_user`, `tenant_membership`; the roles `bp_owner`, `bp_app` and `bp_system`; RLS policies including the membership-lookup exception; the `withTenantTx` helper using `SET LOCAL`; isolation tests TI-01 to TI-05 and TI-15.
+1. **Review and merge Milestone 1:** push the branch, confirm the new CI jobs pass on GitHub (including gitleaks), and decide the MinIO replacement.
+2. **Tenant isolation foundation (M2):** migrations for `tenant`, `app_user`, `tenant_membership`; the roles `bp_owner` (non-superuser), `bp_app` and `bp_system`; RLS policies including the membership-lookup exception; the `withTenantTx` helper using `SET LOCAL`; isolation tests TI-01 to TI-05 and TI-15.
+3. **Decide D-OPEN-03 (identity provider) and D-OPEN-15 (service authentication, RequestContext signing)** so M2 authentication and the api → ai-engine trust boundary can be built.

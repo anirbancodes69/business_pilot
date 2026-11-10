@@ -1,11 +1,11 @@
 # apps/api — NestJS modular monolith
 
-**Status: not started** (see [CURRENT.md](../../CURRENT.md)). Scaffolded in Milestone 1.
+**Status: skeleton** (Milestone 1; see [CURRENT.md](../../CURRENT.md)). Implemented: both entrypoints, `/health/live` and `/health/ready`, request_id middleware, OpenTelemetry, Zod-validated config, Kysely setup in `src/platform/database` (no tables yet). Worker only exposes a health port until the first job exists.
 
 One codebase, two process types:
 
 - `main.ts`: the HTTP API (public REST, plus internal tool endpoints for ai-engine)
-- `worker.ts`: BullMQ consumers (sync, outbox relay, vector indexing, reconciliation, retention)
+- `worker.ts`: BullMQ consumers (planned; health port only today) (sync, outbox relay, vector indexing, reconciliation, retention)
 
 Proposed modules: identity, tenancy, authorization, configuration, semantic-model, connectors, sync, data-access (plan compiler, execution, exact cache, retrieval), conversations, audit, platform (crypto, storage, outbox, telemetry, tenant-aware DB and Redis wrappers).
 

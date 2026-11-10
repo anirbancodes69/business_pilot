@@ -1,6 +1,6 @@
 # apps/web — Next.js frontend
 
-**Status: not started** (see [CURRENT.md](../../CURRENT.md)). Scaffolded in Milestone 1.
+**Status: skeleton** (Milestone 1; see [CURRENT.md](../../CURRENT.md)). Implemented: App Router shell and `GET /api/health`. Nothing else.
 
 Responsibilities: sign-in, active-tenant selection, chat UI that renders AnswerResponse sections (facts, calculations, explanations, recommendations, unknowns, sources, freshness), data-source onboarding, mapping review and approval, semantic model publishing, user and role admin, sync status.
 
