@@ -11,6 +11,7 @@ Each ADR records one significant decision. The status register is [DECISIONS.md]
 | [0005](ADR-0005-synchronization-architecture.md) | Synchronization architecture | Accepted (independence); Proposed (mechanisms) |
 | [0006](ADR-0006-ai-orchestration.md) | AI orchestration | Accepted (deterministic, grounded); Proposed (plan IR, tool boundary) |
 | [0007](ADR-0007-caching-strategy.md) | Caching strategy | Accepted (cache identity); Proposed (mechanisms) |
-| [0008](ADR-0008-technology-selection.md) | Technology selection | Accepted (modular monolith); Proposed (stack) |
+| [0008](ADR-0008-technology-selection.md) | Technology selection | Accepted (modular monolith, stack, tooling); Proposed (Redis settings) |
+| [0009](ADR-0009-database-access-library.md) | Database access library | Accepted (Kysely) |
 
 When one ADR holds decisions with different statuses, its **Decision items** table gives the status of each item, using the IDs in DECISIONS.md.

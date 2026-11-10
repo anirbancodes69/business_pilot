@@ -5,14 +5,13 @@
 ## Prerequisites (planned)
 
 - Docker with Docker Compose v2
-- Node.js 22 LTS and pnpm (version pinned through `packageManager` in the root `package.json`)
+- Node.js 24 LTS and pnpm (version pinned through `packageManager` in the root `package.json`)
 - Python 3.12+ and [uv](https://docs.astral.sh/uv/)
 - Git
 
 ## First-time setup (planned)
 
 ```bash
-git init                                   # the repository is not under git yet
 cp .env.example .env                       # fill in local values only, never commit .env
 docker compose -f infrastructure/docker/compose.yaml up -d postgres redis   # (planned)
 pnpm install                               # (planned)
@@ -35,8 +34,8 @@ uv run --project apps/ai-engine fastapi dev  # (planned)
 
 - `strict: true`, plus `noUncheckedIndexedAccess`. No `any` without a comment explaining why.
 - ESLint (flat config) and Prettier. Zod validates every runtime boundary: HTTP input, job payloads, configuration documents, AI engine responses.
-- Test runner: Vitest (proposed for all TypeScript packages, under P-09/P-10).
-- Database access goes only through the tenant-aware transaction helper (`withTenantTx(tenantId, fn)`). A lint rule forbids importing the raw pool or raw Redis client outside `platform`.
+- Test runner: Vitest (all TypeScript packages, D-11/D-12).
+- Database access uses Kysely (D-13, ADR-0009) and goes only through the tenant-aware transaction helper (`withTenantTx(tenantId, fn)`). A lint rule forbids importing the raw pool or raw Redis client outside `platform`.
 
 ### Python
 
@@ -76,4 +75,4 @@ See [.env.example](.env.example). Placeholders only. Secrets for shared environm
 
 ## CI
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) currently checks that all JSON Schema files are valid JSON and that the required root documents exist. Milestone 1 extends it with lint, type-check and tests for each app.
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request. It currently checks that the required root documents exist, that all JSON Schema files are valid JSON, and that `.env.example` holds placeholders. It has passed on GitHub (run 2, commit c874fdc). Milestone 1 extends it with lint, type-check and tests for each app.

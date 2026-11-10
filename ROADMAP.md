@@ -15,7 +15,7 @@ Status of every milestone: **Not started** (see [CURRENT.md](CURRENT.md)).
 - E1.1 Monorepo: git, pnpm workspace, uv project, shared lint and format configuration.
 - E1.2 Skeletons: `apps/web` (Next.js), `apps/api` (NestJS with HTTP and worker entrypoints), `apps/ai-engine` (FastAPI). Each has a health endpoint.
 - E1.3 `infrastructure/docker/compose.yaml`: PostgreSQL, Redis Stack (with `noeviction` and AOF, P-14), MinIO (S3-compatible), and the four processes: web, api, worker, ai-engine.
-- E1.6 Decide D-OPEN-16 (database access library and migration tool).
+- E1.6 ~~Decide D-OPEN-16~~ Decided 2026-11-11: Kysely (D-13, ADR-0009). Set it up with the api skeleton.
 - E1.4 CI: lint, type-check and unit tests for all apps. Secret scanning. Dependency audit.
 - E1.5 OpenTelemetry wiring with a shared `request_id` across api and ai-engine. A local Grafana stack is optional in this milestone.
 

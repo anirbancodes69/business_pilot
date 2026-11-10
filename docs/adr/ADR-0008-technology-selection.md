@@ -1,26 +1,26 @@
 # ADR-0008: Technology selection
 
-- **Status:** Accepted (D-09, the system shape). Proposed (P-09, P-10, the specific technologies). OPEN (D-OPEN-01 to -06).
-- **Date:** 2026-11-10
+- **Status:** Accepted (D-09 system shape; D-11 stack; D-12 tooling; D-13 database access, see ADR-0009). Proposed (P-14). OPEN (D-OPEN-01, -02, -06).
+- **Date:** 2026-11-10. Updated 2026-11-11: product owner confirmed the stack, tooling and Node 24.
 
 | Item | Status |
 |---|---|
 | D-09 Modular monolith + separate AI service + workers; no Kafka or Kubernetes without an ADR | Accepted |
-| P-09 Technology stack (table below) | Proposed |
-| P-10 pnpm workspaces; uv for Python | Proposed |
+| D-11 Technology stack (table below), formerly P-09 | Accepted (2026-11-11) |
+| D-12 pnpm workspaces; uv for Python, formerly P-10 | Accepted (2026-11-11) |
 | P-14 Redis `noeviction` + AOF; caches bounded by TTL and budget | Proposed |
-| D-OPEN-16 Database access library and migration tool | OPEN |
+| D-13 Database access library and migration tool, formerly D-OPEN-16 | Accepted (2026-11-11), see [ADR-0009](ADR-0009-database-access-library.md) |
 
 ## Context
 
 A small team needs to ship a secure vertical slice quickly, keep the infrastructure portable (Model B), and use the Python ecosystem for AI work. Each extra runtime or datastore adds operational cost.
 
-## Decision (proposed stack)
+## Decision (accepted stack)
 
 | Component | Choice | Rationale | Main trade-off |
 |---|---|---|---|
 | Frontend | Next.js + TypeScript | Mature, typed, SSR when needed | Framework churn. Use the App Router conservatively |
-| Backend | NestJS + TypeScript | Modules and dependency injection fit a modular monolith. Shares types with web | Decorator-heavy. Keep domain logic framework-light |
+| Backend | NestJS + TypeScript on Node.js 24 LTS | Modules and dependency injection fit a modular monolith. Shares types with web | Decorator-heavy. Keep domain logic framework-light |
 | AI engine | Python 3.12 + FastAPI + Pydantic v2 | Best AI and evaluation ecosystem. Pydantic matches JSON Schema contracts | A second language and runtime |
 | Primary DB | PostgreSQL (16+) | RLS, JSONB, strong SQL, available everywhere | Analytical scale limits (see ADR-0002) |
 | Queue | BullMQ on Redis | Reuses Redis. Retries, delays, rate limits, dead-letter | Node-only consumers. Python doesn't consume jobs (by design) |
@@ -30,10 +30,10 @@ A small team needs to ship a secure vertical slice quickly, keep the infrastruct
 | Observability | OpenTelemetry + Grafana stack | Vendor-neutral | Self-hosting effort |
 | API contracts | OpenAPI (public and internal) | Generated clients in `packages/api-contracts` | Must be kept in sync with code (generate from code or validate in CI) |
 | Config validation | JSON Schema (source of truth in `schemas/`), Pydantic and Zod at runtime | Language-neutral | Two runtime validators to keep consistent (generate where possible) |
-| TS tooling | pnpm workspaces, ESLint, Prettier, Vitest | Fast, minimal | Turborepo deferred |
+| TS tooling | pnpm workspaces, ESLint, Prettier, Vitest, Kysely | Fast, minimal | Turborepo deferred |
 | Python tooling | uv, ruff, mypy, pytest | Fast, modern | — |
 
-Not adopted: Kafka, Kubernetes, a service mesh, LangChain-style agent frameworks (thin provider clients are preferred), a separate vector database product, ORMs that hide SQL in the data-access module. The database access library and migration tool are OPEN (D-OPEN-16): a query builder that keeps SQL explicit (Kysely or Drizzle) is recommended, to be decided in Milestone 1.
+Not adopted: Kafka, Kubernetes, a service mesh, LangChain-style agent frameworks (thin provider clients are preferred), a separate vector database product, ORMs that hide SQL in the data-access module. The database access library and migration tool are Kysely and its migrator (D-13, [ADR-0009](ADR-0009-database-access-library.md)). Application code runs in Docker, so Node 24 is pinned in the Dockerfiles and in `.nvmrc` for host-side tooling.
 
 ## Alternatives considered
 

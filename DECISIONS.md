@@ -24,6 +24,9 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | D-08 | Cache identity includes tenant, authorization scope, normalized plan, semantic model version, data version and cache policy version. Financial results are never reused on embedding similarity alone. | [0007](docs/adr/ADR-0007-caching-strategy.md) |
 | D-09 | The backend is a modular monolith, with a separately deployable AI service and workers. No Kafka or Kubernetes without a documented reason. | [0008](docs/adr/ADR-0008-technology-selection.md) |
 | D-10 | AI-assisted schema mappings and semantic model changes need human approval before production activation. | [0004](docs/adr/ADR-0004-connector-architecture.md) |
+| D-11 | Stack (formerly P-09): Next.js, NestJS, FastAPI, PostgreSQL, Redis Stack, BullMQ, S3-compatible storage, Docker Compose, OpenTelemetry and Grafana, OpenAPI, JSON Schema and Pydantic. Node.js 24 LTS and Python 3.12+. Redis's *vector* role remains subject to D-OPEN-06. Confirmed by the product owner 2026-11-11. | [0008](docs/adr/ADR-0008-technology-selection.md) |
+| D-12 | Tooling (formerly P-10): pnpm workspaces for TypeScript (no Turborepo until build times need it). uv for Python. Confirmed 2026-11-11. | [0008](docs/adr/ADR-0008-technology-selection.md) |
+| D-13 | Database access (formerly D-OPEN-16): Kysely query builder and its migrator for `apps/api`. SQL stays explicit, no ORM. RLS policies and roles are written as raw SQL migrations. Confirmed 2026-11-11. | [0009](docs/adr/ADR-0009-database-access-library.md) |
 
 ## Proposed
 
@@ -37,8 +40,6 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | P-06 | Transactional outbox in PostgreSQL, relayed to BullMQ, for indexing and cache invalidation events. | [0005](docs/adr/ADR-0005-synchronization-architecture.md) |
 | P-07 | The semantic cache maps a question to a validated plan only. Result reuse always goes through the exact cache. | [0007](docs/adr/ADR-0007-caching-strategy.md) |
 | P-08 | One Redis vector index per tenant (`idx:t:{tenant_id}:*`). Revisit if the tenant count makes this costly. | [0003](docs/adr/ADR-0003-tenant-isolation.md) |
-| P-09 | Stack: Next.js, NestJS, FastAPI, PostgreSQL, Redis Stack, BullMQ, S3-compatible storage, Docker Compose, OpenTelemetry and Grafana, OpenAPI, JSON Schema and Pydantic. Redis's *vector* role remains subject to D-OPEN-06. | [0008](docs/adr/ADR-0008-technology-selection.md) |
-| P-10 | pnpm workspaces for TypeScript (no Turborepo until build times need it). uv for Python. | [0008](docs/adr/ADR-0008-technology-selection.md) |
 | P-11 | Canonical entities live in fixed per-template tables with a JSONB `ext` column for tenant-specific attributes. | [0002](docs/adr/ADR-0002-data-storage-strategy.md) |
 | P-12 | Connector credentials use envelope encryption behind a `KeyManagement` port. Only references are stored in configuration. | [0003](docs/adr/ADR-0003-tenant-isolation.md) |
 | P-13 | Semantic models are immutable once published. Each change creates a new version. | [0006](docs/adr/ADR-0006-ai-orchestration.md) |
@@ -66,6 +67,5 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | D-OPEN-13 | Custom entities beyond templates | Templates plus JSONB for the MVP. Revisit dynamic tables after pilots. |
 | D-OPEN-14 | What result data the LLM may see (aggregates only vs bounded rows) and provider data-retention terms | Aggregates and bounded top-N rows. PII columns masked unless policy allows. |
 | D-OPEN-15 | Service-to-service authentication (api ↔ ai-engine) and the RequestContext signing scheme | A shared-secret service token plus HMAC-signed RequestContext for the MVP. mTLS or asymmetric signing for Model B. Decide in Milestone 2. |
-| D-OPEN-16 | Database access library and migration tool for `apps/api` | A query builder that keeps SQL explicit (Kysely or Drizzle). Decide in Milestone 1. |
 | D-OPEN-17 | Backup and recovery targets (RPO/RTO), and backup retention window | Set before Milestone 10. The retention window must be disclosed to customers (see data-handling). |
 | D-OPEN-18 | Usage metering and quota model (questions, tokens, sync volume per tenant) | Meter from Milestone 6 (in `ai_execution`). Quota limits follow D-OPEN-11. |

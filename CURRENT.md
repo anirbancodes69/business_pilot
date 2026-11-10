@@ -6,14 +6,14 @@
 
 **Current milestone:** Pre-Milestone 1. The documentation foundation is complete and audited; [Milestone 1](ROADMAP.md#milestone-1--repository-foundation-and-infrastructure) has not started.
 
-**Last updated:** 2026-11-10 (after the AI workflow documentation review)
+**Last updated:** 2026-11-11 (after the product owner confirmed the stack, Kysely and Node 24)
 
 ## Implemented
 
 - **Application: nothing.** No application, infrastructure or test code exists. `apps/*`, `packages/*` and `infrastructure/*` contain only README placeholders.
 - Documentation (including the AI development workflow), ADRs, interface contracts and configuration schemas (Markdown and JSON Schema, draft v0). These are designs, not working software.
-- `.github/workflows/ci.yml` is **defined but has never run**: the folder is not a git repository and has no remote. When it does run, it only checks that the required documents exist, that the JSON files are valid JSON, and that `.env.example` holds placeholders.
-- Verified locally on 2026-11-10: all JSON files parse and all relative Markdown links resolve (checked with PowerShell).
+- `.github/workflows/ci.yml` has run on GitHub (2 runs; the latest, commit c874fdc, passed). It only checks that the required documents exist, that relative Markdown links resolve, that the JSON files are valid JSON, and that `.env.example` holds placeholders. The link check was added on 2026-11-11 and has not run on GitHub yet.
+- Verified locally on 2026-11-11: all JSON files parse and all relative Markdown links resolve (checked with the CI script).
 
 ## Designed (documented, not implemented)
 
@@ -41,6 +41,8 @@
   - Added OPEN decisions D-OPEN-15 to D-OPEN-18.
 - 2026-11-10: added [AI_WORKFLOW.md](AI_WORKFLOW.md) (the AI-assisted development workflow) and referenced it from CLAUDE.md. This is process documentation, not application code.
 
+- 2026-11-11: the product owner accepted the stack and tooling (D-11, D-12, formerly P-09 and P-10), chose Kysely for database access (D-13, [ADR-0009](docs/adr/ADR-0009-database-access-library.md)) and Node.js 24 LTS. Updated DECISIONS.md, ADR-0008, DEVELOPMENT.md and ROADMAP.md. CI now requires AI_WORKFLOW.md and checks relative Markdown links. No application code was written.
+
 ## In progress
 
 - Nothing.
@@ -53,10 +55,9 @@
 
 ## Known issues and risks
 
-- **Not a git repository.** Run `git init` before Milestone 1. CI cannot run until then.
-- **Python is not installed** on the current development machine (the `python3` alias points to the Microsoft Store stub). Install Python 3.12+ and uv for ai-engine work.
+- **Local toolchain (macOS arm64, checked 2026-11-11):** Docker 29 and Compose v2 are present. pnpm and uv are not installed (`corepack enable` provides pnpm). Python is 3.14; pin 3.12 through uv. Node is 24, which now matches the decision.
+- [BusinessPilot_New_System_Setup_and_Implementation_Guide.md](BusinessPilot_New_System_Setup_and_Implementation_Guide.md) conflicts with the repo docs: it says to avoid host runtimes (DEVELOPMENT.md needs them), puts authentication in M1 (ROADMAP puts it in M2) and mentions a "SQL-validation flow" (the design uses query plans, P-03). Treat ROADMAP.md as authoritative. Decide whether to move the guide to `docs/` or delete it.
 - OPEN decisions that block specific milestones:
-  - Before M1: database access library and migrations (D-OPEN-16).
   - In M2: identity provider (D-OPEN-03) and service authentication / RequestContext signing (D-OPEN-15).
   - Before M4: provisional LLM provider (D-OPEN-01).
   - Before M7: embedding model and vector store (D-OPEN-02, D-OPEN-06).
@@ -69,10 +70,10 @@
 
 ## Important technical decisions
 
-See [DECISIONS.md](DECISIONS.md): 10 Accepted, 17 Proposed, 18 OPEN. In summary: shared SaaS first, with portable architecture; hybrid relational and vector storage; layered tenant isolation (application authorization plus PostgreSQL RLS); the LLM never decides permissions; a deterministic pipeline producing validated query plans; a sync engine independent of AI; a modular monolith plus a separate AI engine; no Kafka or Kubernetes.
+See [DECISIONS.md](DECISIONS.md): 13 Accepted, 15 Proposed, 17 OPEN. In summary: shared SaaS first, with portable architecture; hybrid relational and vector storage; layered tenant isolation (application authorization plus PostgreSQL RLS); the LLM never decides permissions; a deterministic pipeline producing validated query plans; a sync engine independent of AI; a modular monolith plus a separate AI engine; no Kafka or Kubernetes.
 
 ## Next three actionable tasks
 
-1. **Repository foundation:** `git init`; decide D-OPEN-16; pnpm workspace; `apps/api` NestJS skeleton with HTTP and worker entrypoints and a health endpoint; `apps/ai-engine` FastAPI skeleton (uv) with a health endpoint; `apps/web` Next.js skeleton; `infrastructure/docker/compose.yaml` with PostgreSQL, Redis Stack (`noeviction`, AOF) and MinIO.
+1. **Repository foundation (M1a):** pnpm workspace on Node 24; Kysely in the api; `apps/api` NestJS skeleton with HTTP and worker entrypoints and a health endpoint; `apps/ai-engine` FastAPI skeleton (uv) with a health endpoint; `apps/web` Next.js skeleton; `infrastructure/docker/compose.yaml` with PostgreSQL, Redis Stack (`noeviction`, AOF) and MinIO.
 2. **CI baseline:** extend `.github/workflows/ci.yml` to lint, type-check and test all apps. Add secret scanning and dependency audit.
 3. **Tenant isolation foundation:** migrations for `tenant`, `app_user`, `tenant_membership`; the roles `bp_owner`, `bp_app` and `bp_system`; RLS policies including the membership-lookup exception; the `withTenantTx` helper using `SET LOCAL`; isolation tests TI-01 to TI-05 and TI-15.

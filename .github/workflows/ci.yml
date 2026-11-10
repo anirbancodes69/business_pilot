@@ -21,9 +21,28 @@ jobs:
         run: |
           set -e
           for f in README.md CLAUDE.md CURRENT.md PRODUCT.md ARCHITECTURE.md DECISIONS.md SECURITY.md \
-                   DATA_CONNECTIVITY.md AI_ENGINEERING.md DEVELOPMENT.md ROADMAP.md .env.example; do
+                   DATA_CONNECTIVITY.md AI_ENGINEERING.md AI_WORKFLOW.md DEVELOPMENT.md ROADMAP.md .env.example; do
             test -f "$f" || { echo "Missing $f"; exit 1; }
           done
+
+      - name: Relative Markdown links resolve
+        run: |
+          python3 - <<'PY'
+          import re, pathlib, sys
+          bad = []
+          for f in pathlib.Path('.').rglob('*.md'):
+              if any(p in ('.git', 'node_modules') for p in f.parts):
+                  continue
+              text = re.sub(r'```.*?```', '', f.read_text(encoding='utf-8'), flags=re.S)
+              for m in re.finditer(r'\[[^\]]*\]\(([^)\s]+)\)', text):
+                  t = m.group(1).split('#')[0]
+                  if not t or re.match(r'^[a-z]+:', t):
+                      continue
+                  if not (f.parent / t).exists():
+                      bad.append(f'{f}: {m.group(1)}')
+          print('\n'.join(bad) or 'all links ok')
+          sys.exit(1 if bad else 0)
+          PY
 
       - name: JSON Schemas are well-formed JSON
         run: |
