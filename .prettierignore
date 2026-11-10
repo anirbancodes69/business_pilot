@@ -1,0 +1,12 @@
+node_modules
+dist
+.next
+coverage
+pnpm-lock.yaml
+uv.lock
+apps/ai-engine/.venv
+contracts
+schemas
+docs
+*.md
+apps/web/tsconfig.json
