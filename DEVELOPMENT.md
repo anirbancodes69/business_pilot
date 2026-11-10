@@ -1,25 +1,29 @@
 # DEVELOPMENT.md — Development guide
 
-> **Status:** no application code exists yet. Commands marked *(planned)* are introduced in Milestone 1 and do not work today. Once a command works, update this file and remove its marker.
+> **Status:** the Milestone 1 skeleton exists (health endpoints only). Commands marked *(planned)* do not work yet.
 
-## Prerequisites (planned)
+## Prerequisites
 
 - Docker with Docker Compose v2
-- Node.js 24 LTS and pnpm (version pinned through `packageManager` in the root `package.json`)
-- Python 3.12+ and [uv](https://docs.astral.sh/uv/)
+- Node.js 24 LTS (`.nvmrc`) and pnpm (pinned by `packageManager` in the root `package.json`; `corepack enable`). Corepack cannot run pnpm 12, so the pin stays on 10.x.
+- Python 3.12+ and [uv](https://docs.astral.sh/uv/) (uv installs the pinned 3.12 itself)
 - Git
 
-## First-time setup (planned)
+## First-time setup
 
 ```bash
-cp .env.example .env                       # fill in local values only, never commit .env
-docker compose -f infrastructure/docker/compose.yaml up -d postgres redis   # (planned)
-pnpm install                               # (planned)
-pnpm --filter api db:migrate               # (planned)
-uv sync --project apps/ai-engine           # (planned)
-pnpm dev                                   # (planned) web + api + worker
-uv run --project apps/ai-engine fastapi dev  # (planned)
+./scripts/setup-local-env.sh               # creates .env with random local secrets; never overwrites an existing .env
+pnpm install
+uv sync --directory apps/ai-engine
+pnpm stack:up                              # builds and starts everything; waits until all services are healthy
+pnpm stack:up:observability                # same, plus a local Grafana stack on http://127.0.0.1:3100 (traces)
+pnpm stack:down
+pnpm --filter @businesspilot/api db:migrate   # no migrations exist yet; runs as bp_owner against the Compose database
 ```
+
+Health: web `:3000/api/health`, api `:3001/health/live` and `/health/ready` (checks Postgres and ai-engine), worker `:3002/health/*` (container only), ai-engine `:8000/health`. Host ports bind to 127.0.0.1.
+
+Running apps outside Docker *(planned convenience; not verified)*: `pnpm --filter @businesspilot/api dev` compiles in watch mode, then `node apps/api/dist/main.js`; `uv run --directory apps/ai-engine uvicorn ai_engine.main:app`; `pnpm --filter @businesspilot/web dev`.
 
 ## Repository conventions
 
@@ -51,14 +55,14 @@ uv run --project apps/ai-engine fastapi dev  # (planned)
 
 ## Testing
 
-| Suite | Command (planned) | Required when |
+| Suite | Command | Required when |
 |---|---|---|
-| TS unit | `pnpm test` | Always |
-| TS integration (real PostgreSQL and Redis through Compose) | `pnpm test:integration` | Any change to data access, sync, cache, jobs |
-| **Tenant isolation** | `pnpm test:isolation` | Any change to data access, cache, retrieval, jobs, storage. Blocks release if failing |
-| Python unit | `uv run pytest` | Always for ai-engine |
-| AI evaluation | `uv run python -m evaluation.run --suite golden` | Prompt, model, planner or semantic layer changes |
-| Lint and types | `pnpm lint && pnpm typecheck`, `uv run ruff check && uv run mypy` | Always |
+| All unit tests (TS and Python), one command | `pnpm test` | Always |
+| TS integration *(planned)* (real PostgreSQL and Redis through Compose) | `pnpm test:integration` | Any change to data access, sync, cache, jobs |
+| **Tenant isolation** *(planned, M2)* | `pnpm test:isolation` | Any change to data access, cache, retrieval, jobs, storage. Blocks release if failing |
+| Python unit only | `uv run --directory apps/ai-engine pytest` | Always for ai-engine |
+| AI evaluation *(planned)* | `uv run python -m evaluation.run --suite golden` | Prompt, model, planner or semantic layer changes |
+| Lint and types (TS and Python) | `pnpm lint && pnpm typecheck` | Always |
 
 Tests that touch tenant data use at least **two tenants** with overlapping natural keys, so leaks are detectable.
 
@@ -75,4 +79,8 @@ See [.env.example](.env.example). Placeholders only. Secrets for shared environm
 
 ## CI
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request. It currently checks that the required root documents exist, that all JSON Schema files are valid JSON, and that `.env.example` holds placeholders. It has passed on GitHub (run 2, commit c874fdc). Milestone 1 extends it with lint, type-check and tests for each app.
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request: documentation and schema checks; `apps` (lint, type-check, `pnpm test`, build for all three apps); gitleaks secret scanning; dependency audit (`pnpm audit --prod` at high severity, `pip-audit`); and a Compose smoke test that must reach all-healthy. All jobs passed on GitHub on 2026-11-11 (see [CURRENT.md](CURRENT.md)). It also runs on pushes to `feature/**`.
+
+## Observability
+
+The api and ai-engine export OpenTelemetry traces (OTLP/HTTP; `OTEL_TRACES_EXPORTER=otlp|console|none`). Context propagates by W3C `traceparent`. `x-request-id` is accepted only if it matches a safe pattern, otherwise generated, and is set as the `request_id` span attribute and echoed in responses. It is for correlation only and never for authorization.

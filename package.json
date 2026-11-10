@@ -1,0 +1,42 @@
+{
+  "name": "businesspilot",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "lint": "pnpm lint:ts && pnpm lint:py",
+    "lint:ts": "eslint . && prettier --check .",
+    "lint:py": "uv run --directory apps/ai-engine ruff check . && uv run --directory apps/ai-engine ruff format --check .",
+    "format": "prettier --write . && uv run --directory apps/ai-engine ruff format .",
+    "typecheck": "pnpm -r --if-present typecheck && uv run --directory apps/ai-engine mypy",
+    "test": "pnpm -r --if-present test && uv run --directory apps/ai-engine pytest",
+    "build": "pnpm -r --if-present build",
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "stack:up": "docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --build --wait",
+    "stack:up:observability": "OTEL_TRACES_EXPORTER=otlp docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile observability up -d --build --wait",
+    "stack:down": "docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile observability down"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ],
+    "overrides": {
+      "postcss": ">=8.5.18"
+    }
+  }
+}

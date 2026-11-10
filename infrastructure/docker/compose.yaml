@@ -1,0 +1,157 @@
+# Local development stack. Secrets come from .env (never committed):
+#   docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --build --wait
+# Host ports are bound to 127.0.0.1 only. Redis and MinIO are never exposed publicly.
+name: businesspilot
+
+x-node-env: &node-env
+  NODE_ENV: production
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: '5432'
+  POSTGRES_DB: ${POSTGRES_DB:-businesspilot}
+  POSTGRES_APP_USER: ${POSTGRES_APP_USER:-bp_app}
+  POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD in .env}
+  AI_ENGINE_BASE_URL: http://ai-engine:8000
+  OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-none}
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-businesspilot}
+      POSTGRES_USER: ${POSTGRES_OWNER_USER:-bp_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:?set POSTGRES_OWNER_PASSWORD in .env}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-bp_app}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../postgres/init:/docker-entrypoint-initdb.d:ro
+    ports: ['127.0.0.1:${POSTGRES_PORT:-5432}:5432']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Redis Stack. noeviction is required by BullMQ; AOF keeps queues durable (P-14).
+  redis:
+    image: redis/redis-stack-server:7.4.0-v3
+    environment:
+      REDIS_ARGS: >-
+        --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+        --maxmemory-policy noeviction --appendonly yes --appendfsync everysec
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    volumes: [redisdata:/data]
+    ports: ['127.0.0.1:6379:6379']
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # MinIO no longer publishes official community images or binaries (checked 2026-11-11), so local
+  # development uses a pinned, frozen, unmaintained mirror. Dev only: never ship this image.
+  # See CURRENT.md known issues; choose a supported S3-compatible store before Model B / production.
+  minio:
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r3
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID in .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY in .env}
+    volumes: [miniodata:/bitnami/minio/data]
+    ports: ['127.0.0.1:9000:9000', '127.0.0.1:9001:9001']
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:9000/minio/health/ready']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ai-engine:
+    build: { context: ../.., dockerfile: infrastructure/docker/ai-engine.Dockerfile }
+    environment:
+      OTEL_SERVICE_NAME: bp-ai-engine
+      OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-none}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+    ports: ['127.0.0.1:8000:8000']
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=3)",
+        ]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  api:
+    build: { context: ../.., dockerfile: infrastructure/docker/api.Dockerfile }
+    environment:
+      <<: *node-env
+      OTEL_SERVICE_NAME: bp-api
+      API_PORT: '3001'
+    depends_on:
+      postgres: { condition: service_healthy }
+      ai-engine: { condition: service_healthy }
+    ports: ['127.0.0.1:3001:3001']
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  worker:
+    build: { context: ../.., dockerfile: infrastructure/docker/api.Dockerfile }
+    command: ['node', 'dist/worker.js']
+    environment:
+      <<: *node-env
+      OTEL_SERVICE_NAME: bp-worker
+      WORKER_HEALTH_PORT: '3002'
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3002/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  web:
+    build: { context: ../.., dockerfile: infrastructure/docker/web.Dockerfile }
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ['127.0.0.1:3000:3000']
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  # Optional local Grafana stack (Tempo, Loki, Prometheus, Grafana). Start with: --profile observability
+  otel-lgtm:
+    profiles: ['observability']
+    image: grafana/otel-lgtm:0.8.1
+    ports: ['127.0.0.1:3100:3000']
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:

@@ -1,6 +1,6 @@
 # infrastructure/postgres
 
-**Status: not started.** Will hold local initialization scripts (roles and extensions). Application migrations live in `apps/api`.
+**Status: partial.** `init/01-roles.sh` creates only the `bp_app` login role (no superuser, no BYPASSRLS) on first start. In the local image `bp_owner` is the bootstrap superuser. The full role model, grants and RLS are Milestone 2. Application migrations live in `apps/api`.
 
 Required roles (see [SECURITY.md §4](../../SECURITY.md#4-tenant-isolation-in-postgresql)):
 
