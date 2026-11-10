@@ -79,7 +79,7 @@ See [.env.example](.env.example). Placeholders only. Secrets for shared environm
 
 ## CI
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request: documentation and schema checks; `apps` (lint, type-check, `pnpm test`, build for all three apps); gitleaks secret scanning; dependency audit (`pnpm audit --prod` at high severity, `pip-audit`); and a Compose smoke test that must reach all-healthy. The jobs added in Milestone 1 have not yet run on GitHub (see [CURRENT.md](CURRENT.md)).
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request: documentation and schema checks; `apps` (lint, type-check, `pnpm test`, build for all three apps); gitleaks secret scanning; dependency audit (`pnpm audit --prod` at high severity, `pip-audit`); and a Compose smoke test that must reach all-healthy. All jobs passed on GitHub on 2026-11-11 (see [CURRENT.md](CURRENT.md)). It also runs on pushes to `feature/**`.
 
 ## Observability
 

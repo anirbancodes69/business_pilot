@@ -2,7 +2,7 @@
 
 > Living document. Update it after every meaningful change (see [CLAUDE.md](CLAUDE.md)). Only list something as Implemented if it exists in the repository and has been run or tested.
 
-**Project status:** Milestone 1 (repository foundation) is implemented on branch `feature/repo-foundation` and awaits review and merge. Only skeletons exist: health endpoints, telemetry and infrastructure. **No product feature exists.**
+**Project status:** Milestone 1 (repository foundation) is implemented on branch `feature/repo-foundation` and is pushed and awaits review and merge (no PR opened yet). Only skeletons exist: health endpoints, telemetry and infrastructure. **No product feature exists.**
 
 **Current milestone:** [Milestone 1](ROADMAP.md#milestone-1--repository-foundation-and-infrastructure), in review.
 
@@ -19,7 +19,7 @@
   - Trace verified: one Tempo trace spans `bp-api` (GET) → `ai-engine.health` → `bp-ai-engine` (GET /health), and `request_id` is the same on all three spans.
   - `pnpm lint`, `pnpm typecheck`, `pnpm test` (13 api, 1 web, 3 ai-engine tests) and `pnpm build` pass. `pnpm audit --prod` shows one moderate finding; `pip-audit` shows none.
 - Documentation (including the AI development workflow), ADRs, interface contracts and configuration schemas (Markdown and JSON Schema, draft v0). These are designs, not working software.
-- `.github/workflows/ci.yml`: the documentation job ran on GitHub (latest run on commit c874fdc passed). The Milestone 1 jobs (apps, secret scan, dependency audit, Compose smoke) and the link check are written but **have not run on GitHub**. The equivalent commands were run locally, except gitleaks, which was not run.
+- `.github/workflows/ci.yml`: all five jobs (docs, apps, secret scan including gitleaks, dependency audit, Compose smoke) passed on GitHub for branch `feature/repo-foundation` (run 42916869932, 2026-11-11). CI also runs on `feature/**` pushes.
 - Verified locally on 2026-11-11: all JSON files parse and all relative Markdown links resolve (checked with the CI script).
 
 ## Designed (documented, not implemented)
@@ -52,11 +52,11 @@
 
 ## In progress
 
-- Review and merge of `feature/repo-foundation` (Milestone 1). Nothing is committed yet.
+- Review and merge of `feature/repo-foundation` (Milestone 1): committed and pushed, CI green, no PR yet.
 
 ## Pending (next milestones)
 
-- Milestone 1 leftovers: first CI run on GitHub; Kysely table-type method (chosen with the first migration); `pnpm stack:up` was not run against the real `.env` (verified with an equivalent throwaway env file).
+- Milestone 1 leftovers: Kysely table-type method (chosen with the first migration); `pnpm stack:up` was not run against the real `.env` (verified with an equivalent throwaway env file).
 - Milestone 2: Tenant management, authentication integration, RLS and the tenant isolation test harness.
 - Milestones 3–10: see [ROADMAP.md](ROADMAP.md).
 
@@ -88,6 +88,6 @@ See [DECISIONS.md](DECISIONS.md): 13 Accepted, 15 Proposed, 17 OPEN. In summary:
 
 ## Next three actionable tasks
 
-1. **Review and merge Milestone 1:** push the branch, confirm the new CI jobs pass on GitHub (including gitleaks), and decide the MinIO replacement.
+1. **Review and merge Milestone 1:** open a PR and merge. Recommended for MinIO: keep the legacy image for local dev now and, before Model B, evaluate a supported S3-compatible store (e.g. SeaweedFS or Garage) in an ADR.
 2. **Tenant isolation foundation (M2):** migrations for `tenant`, `app_user`, `tenant_membership`; the roles `bp_owner` (non-superuser), `bp_app` and `bp_system`; RLS policies including the membership-lookup exception; the `withTenantTx` helper using `SET LOCAL`; isolation tests TI-01 to TI-05 and TI-15.
 3. **Decide D-OPEN-03 (identity provider) and D-OPEN-15 (service authentication, RequestContext signing)** so M2 authentication and the api → ai-engine trust boundary can be built.
