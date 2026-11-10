@@ -1,6 +1,6 @@
-# CI — documentation and contract checks only.
-# No application code exists yet. Milestone 1 adds lint, type-check and tests for apps/web, apps/api and apps/ai-engine,
-# plus the tenant isolation suite (docs/security/tenant-isolation-tests.md).
+# CI — documentation and contract checks, lint/type-check/tests for all apps, secret scanning,
+# dependency audit and a Docker Compose smoke test.
+# The tenant isolation suite (docs/security/tenant-isolation-tests.md) is added in Milestone 2.
 name: ci
 
 on:
@@ -58,3 +58,69 @@ jobs:
           if grep -Eq '=(sk-|AKIA|ghp_|xox[bp]-)|=[A-Za-z0-9+/]{32,}={0,2}$' .env.example; then
             echo ".env.example appears to contain a real credential"; exit 1
           fi
+
+  apps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version comes from packageManager in package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --frozen --directory apps/ai-engine
+      - name: Lint
+        run: pnpm lint
+      - name: Type-check
+        run: pnpm typecheck
+      - name: Unit tests (all apps)
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v5
+      - name: Audit Node dependencies (production, high and above)
+        run: pnpm audit --prod --audit-level high
+      - name: Audit Python dependencies
+        run: |
+          uv export --frozen --no-dev --no-hashes --no-emit-project --directory apps/ai-engine -o "$RUNNER_TEMP/requirements.txt"
+          uvx pip-audit -r "$RUNNER_TEMP/requirements.txt" --no-deps
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    needs: apps
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create throwaway .env with random secrets
+        run: ./scripts/setup-local-env.sh
+      - name: All services become healthy
+        run: docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --build --wait --wait-timeout 300
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --env-file .env -f infrastructure/docker/compose.yaml logs --no-color --tail 100
+      - name: Tear down
+        if: always()
+        run: docker compose --env-file .env -f infrastructure/docker/compose.yaml down -v
