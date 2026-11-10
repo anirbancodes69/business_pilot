@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:schemas:semantic-model:semantic-model",
+  "x-version": "0.1.0",
+  "title": "SemanticModel",
+  "description": "A tenant's versioned business vocabulary over canonical entities. Immutable once published (P-13). Physical mappings and measure expressions here are visible only to the api plan compiler, never to the LLM.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "template", "settings", "entities", "measures", "dimensions"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "template": { "type": "string", "examples": ["wholesale_distribution@0"] },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "timezone", "fiscal_year_start_month"],
+      "properties": {
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "default": "INR" },
+        "timezone": { "type": "string", "default": "Asia/Kolkata" },
+        "fiscal_year_start_month": { "type": "integer", "minimum": 1, "maximum": 12, "default": 4 },
+        "number_format": { "enum": ["indian", "international"], "default": "indian" }
+      }
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "table"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "table": { "type": "string", "description": "Canonical table, e.g. analytics.invoice. Compiler-only." },
+          "synonyms": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "description": "The only join paths the compiler may use.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "on", "cardinality"],
+        "properties": {
+          "from": { "$ref": "#/$defs/id" },
+          "to": { "$ref": "#/$defs/id" },
+          "on": { "type": "array", "items": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 } },
+          "cardinality": { "enum": ["many_to_one", "one_to_many", "one_to_one"] }
+        }
+      }
+    },
+    "measures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "entity", "aggregation", "unit"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "label": { "type": "string" },
+          "description": { "type": "string" },
+          "entity": { "$ref": "#/$defs/id" },
+          "aggregation": { "enum": ["sum", "count", "count_distinct", "avg", "min", "max", "ratio", "custom"] },
+          "attribute": { "type": "string" },
+          "numerator": { "$ref": "#/$defs/id" },
+          "denominator": { "$ref": "#/$defs/id" },
+          "expression_ref": { "type": "string", "description": "For aggregation=custom: ID of a vetted compiler-side expression; never free SQL." },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["attribute", "operator", "values"],
+              "properties": {
+                "attribute": { "type": "string" },
+                "operator": { "enum": ["eq", "neq", "in", "not_in", "is_null", "is_not_null"] },
+                "values": { "type": "array" }
+              }
+            }
+          },
+          "unit": { "enum": ["currency", "count", "percent", "days", "quantity"] },
+          "default_time_dimension": { "type": "string" },
+          "synonyms": { "type": "array", "items": { "type": "string" } },
+          "tags": { "type": "array", "items": { "enum": ["pii", "sensitive", "financial"] } }
+        }
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "entity", "attribute", "type"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$" },
+          "label": { "type": "string" },
+          "entity": { "$ref": "#/$defs/id" },
+          "attribute": { "type": "string" },
+          "type": { "enum": ["categorical", "time", "numeric", "boolean"] },
+          "synonyms": { "type": "array", "items": { "type": "string" } },
+          "tags": { "type": "array", "items": { "enum": ["pii", "sensitive"] } }
+        }
+      }
+    },
+    "glossary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["term", "definition"],
+        "properties": {
+          "term": { "type": "string" },
+          "definition": { "type": "string" },
+          "maps_to": { "type": "string", "pattern": "^(measure|dimension|entity):[a-z0-9_.]+$" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+  }
+}

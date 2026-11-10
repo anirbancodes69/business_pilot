@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:contracts:ai:query-plan",
+  "x-version": "0.1.0",
+  "title": "QueryPlan",
+  "description": "Structured, semantic-level query produced by the planner (LLM) and compiled to SQL by the api. References semantic IDs only; contains no SQL, table names, tenant IDs or permission data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["plan_version", "semantic_model_version", "intent", "measures", "time_range"],
+  "properties": {
+    "plan_version": { "const": "0.1" },
+    "semantic_model_version": { "type": "integer", "minimum": 1 },
+    "intent": { "enum": ["metric", "ranking", "comparison", "trend", "diagnostic", "recommendation"] },
+    "measures": { "type": "array", "items": { "$ref": "#/$defs/semanticId" }, "minItems": 1, "maxItems": 5, "uniqueItems": true },
+    "dimensions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id"],
+        "properties": {
+          "id": { "$ref": "#/$defs/semanticId" },
+          "time_grain": { "enum": ["day", "week", "month", "quarter", "fiscal_quarter", "year", "fiscal_year"] }
+        }
+      }
+    },
+    "filters": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dimension", "operator", "values"],
+        "properties": {
+          "dimension": { "$ref": "#/$defs/semanticId" },
+          "operator": { "enum": ["eq", "neq", "in", "not_in", "gt", "gte", "lt", "lte", "between"] },
+          "values": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "type": ["string", "number", "boolean"] } }
+        }
+      }
+    },
+    "time_range": { "$ref": "#/$defs/timeRange" },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "time_range"],
+      "properties": {
+        "type": { "enum": ["previous_period", "same_period_last_year", "custom"] },
+        "time_range": { "$ref": "#/$defs/timeRange" }
+      }
+    },
+    "breakdowns": {
+      "type": "array",
+      "description": "Diagnostic intent only: dimensions to decompose a change by. Bounded by max_tool_calls.",
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/semanticId" }
+    },
+    "sort": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["by", "direction"],
+        "properties": {
+          "by": { "$ref": "#/$defs/semanticId" },
+          "direction": { "enum": ["asc", "desc"] }
+        }
+      }
+    },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "rationale": { "type": "string", "maxLength": 500, "description": "Short planner explanation for audit/debug; ignored by the compiler." }
+  },
+  "$defs": {
+    "semanticId": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)?$" },
+    "timeRange": {
+      "description": "Either absolute dates or a relative token. Relative tokens are resolved to absolute dates deterministically (P-17) before validation; the plan compiler accepts only the absolute form.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start", "end"],
+          "properties": {
+            "start": { "type": "string", "format": "date" },
+            "end": { "type": "string", "format": "date" },
+            "time_dimension": { "$ref": "#/$defs/semanticId" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["relative"],
+          "properties": {
+            "relative": { "enum": ["today", "yesterday", "this_week", "last_week", "this_month", "last_month", "this_quarter", "last_quarter", "this_year", "last_year", "fiscal_ytd", "this_fiscal_year", "last_fiscal_year", "last_n_days", "last_n_months"] },
+            "n": { "type": "integer", "minimum": 1, "maximum": 730 },
+            "time_dimension": { "$ref": "#/$defs/semanticId" }
+          }
+        }
+      ]
+    }
+  }
+}

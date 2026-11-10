@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:contracts:ai:answer-response",
+  "x-version": "0.1.0",
+  "title": "AnswerResponse",
+  "description": "Structured answer returned by ai-engine to the api. Sections distinguish verified facts, derived calculations, possible explanations, recommendations and unknowns.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "status", "intent", "summary", "verified_facts", "sources", "freshness", "execution"],
+  "properties": {
+    "request_id": { "type": "string", "format": "uuid" },
+    "status": { "enum": ["answered", "answered_facts_only", "clarification_needed", "not_authorized", "out_of_scope", "failed"] },
+    "intent": { "type": "string" },
+    "summary": { "type": "string", "maxLength": 1200 },
+    "verified_facts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["statement", "result_set_id"],
+        "properties": {
+          "statement": { "type": "string" },
+          "result_set_id": { "type": "string" },
+          "values": { "type": "array", "items": { "type": ["number", "string"] } }
+        }
+      }
+    },
+    "derived_calculations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "value", "formula", "inputs"],
+        "properties": {
+          "label": { "type": "string" },
+          "value": { "type": "number" },
+          "unit": { "type": "string" },
+          "formula": { "type": "string", "description": "e.g. (current - previous) / previous" },
+          "inputs": { "type": "array", "items": { "type": "string" }, "description": "References to result_set_id:column:row values" }
+        }
+      }
+    },
+    "possible_explanations": { "type": "array", "items": { "type": "string" } },
+    "recommendations": { "type": "array", "items": { "type": "string" } },
+    "unknowns": { "type": "array", "items": { "type": "string" } },
+    "clarification_question": { "type": "string" },
+    "conversation_summary": { "type": "string", "maxLength": 2000, "description": "Updated running summary (intents and plan descriptions, no result rows). Stored by the api and sent back on the next turn." },
+    "tables": {
+      "type": "array",
+      "description": "Result tables for UI rendering (from verified result sets).",
+      "items": { "type": "object", "required": ["result_set_id"], "properties": { "result_set_id": { "type": "string" }, "title": { "type": "string" } } }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["data_source_id", "entity"],
+        "properties": {
+          "data_source_id": { "type": "string", "format": "uuid" },
+          "data_source_name": { "type": "string" },
+          "entity": { "type": "string" },
+          "document_ref": { "type": "string" }
+        }
+      }
+    },
+    "freshness": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dataset_id", "as_of"],
+        "properties": {
+          "dataset_id": { "type": "string", "format": "uuid" },
+          "as_of": { "type": "string", "format": "date-time" },
+          "access_mode": { "enum": ["managed_sync", "live_federated"] },
+          "stale": { "type": "boolean" }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["plan_hashes", "grounding", "semantic_model_version"],
+      "properties": {
+        "plan_hashes": { "type": "array", "items": { "type": "string" } },
+        "semantic_model_version": { "type": "integer" },
+        "grounding": { "enum": ["passed", "passed_after_regeneration", "failed_degraded", "not_applicable"] },
+        "cache": {
+          "type": "object",
+          "properties": {
+            "semantic_plan_hit": { "type": "boolean" },
+            "exact_result_hits": { "type": "integer" }
+          }
+        },
+        "tool_calls": { "type": "integer" },
+        "prompt_versions": { "type": "object", "additionalProperties": { "type": "string" } },
+        "model_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

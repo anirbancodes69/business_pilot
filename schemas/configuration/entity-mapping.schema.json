@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:schemas:configuration:entity-mapping",
+  "x-version": "0.1.0",
+  "title": "EntityMapping",
+  "description": "Maps one approved source object to one canonical entity. Activation requires human approval (D-10).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["template", "canonical_entity", "source_object", "key_fields", "field_mappings", "status"],
+  "properties": {
+    "template": { "type": "string", "examples": ["wholesale_distribution@0"] },
+    "canonical_entity": { "type": "string", "examples": ["invoice"] },
+    "source_object": { "type": "string" },
+    "source_schema_fingerprint": { "type": "string" },
+    "key_fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "updated_at_field": { "type": "string", "description": "Source column used for timestamp-cursor incremental sync, if trustworthy." },
+    "field_mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["target"],
+        "properties": {
+          "target": { "type": "string", "description": "Canonical attribute, or ext.<name> for tenant-specific attributes." },
+          "source": { "type": "string" },
+          "constant": { "type": ["string", "number", "boolean", "null"] },
+          "transforms": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["op"],
+              "properties": {
+                "op": { "enum": ["trim", "lower", "upper", "cast", "parse_date", "parse_number", "value_map", "currency", "lookup_ref"] },
+                "args": { "type": "object" }
+              }
+            }
+          },
+          "tags": { "type": "array", "items": { "enum": ["pii", "sensitive", "financial"] } },
+          "suggested_by_ai": { "type": "boolean" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        },
+        "oneOf": [{ "required": ["source"] }, { "required": ["constant"] }]
+      }
+    },
+    "row_filter": { "type": "string", "description": "Declarative filter expression on source fields (grammar TBD in Milestone 4); never raw SQL." },
+    "status": { "enum": ["suggested", "in_review", "approved", "active", "rejected", "needs_review", "superseded"] },
+    "approved_by": { "type": "string", "format": "uuid" },
+    "approved_at": { "type": "string", "format": "date-time" }
+  }
+}

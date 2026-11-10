@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:schemas:configuration:data-source",
+  "x-version": "0.1.0",
+  "title": "DataSource",
+  "description": "A tenant data source configuration. Contains a credential reference only, never secrets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "type", "access_mode", "connection", "approved_objects"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "type": { "enum": ["excel", "google_sheets", "postgresql", "mysql", "mongodb"] },
+    "access_mode": { "enum": ["managed_sync", "live_federated"] },
+    "credential_ref": { "type": "string", "format": "uuid", "description": "Reference to core.connector_credential. Absent for uploads." },
+    "connection": {
+      "type": "object",
+      "description": "Non-secret connection parameters; shape depends on type.",
+      "oneOf": [
+        {
+          "title": "sql",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["host", "port", "database"],
+          "properties": {
+            "host": { "type": "string" },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "database": { "type": "string" },
+            "schema": { "type": "string" },
+            "tls_mode": { "enum": ["require", "verify-ca", "verify-full"], "default": "verify-full" }
+          }
+        },
+        {
+          "title": "mongodb",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["database"],
+          "properties": {
+            "database": { "type": "string" },
+            "tls": { "type": "boolean", "default": true }
+          }
+        },
+        {
+          "title": "google_sheets",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["spreadsheet_ids"],
+          "properties": { "spreadsheet_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 } }
+        },
+        {
+          "title": "excel_upload",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["upload_mode"],
+          "properties": { "upload_mode": { "const": "manual" } }
+        }
+      ]
+    },
+    "approved_objects": {
+      "type": "array",
+      "description": "Tables, collections or sheets the customer explicitly approved. Nothing else is read.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["object"],
+        "properties": {
+          "object": { "type": "string" },
+          "excluded_fields": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schedule_cron": { "type": "string" },
+        "preferred_change_detection": { "type": "string" },
+        "reconciliation_cron": { "type": "string" }
+      }
+    },
+    "embedding_opt_in_fields": {
+      "type": "array",
+      "description": "Low-sensitivity text fields the tenant explicitly allows to be embedded (e.g. product descriptions). Default: none.",
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -1,0 +1,41 @@
+# CI — documentation and contract checks only.
+# No application code exists yet. Milestone 1 adds lint, type-check and tests for apps/web, apps/api and apps/ai-engine,
+# plus the tenant isolation suite (docs/security/tenant-isolation-tests.md).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-and-schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required root documents exist
+        run: |
+          set -e
+          for f in README.md CLAUDE.md CURRENT.md PRODUCT.md ARCHITECTURE.md DECISIONS.md SECURITY.md \
+                   DATA_CONNECTIVITY.md AI_ENGINEERING.md DEVELOPMENT.md ROADMAP.md .env.example; do
+            test -f "$f" || { echo "Missing $f"; exit 1; }
+          done
+
+      - name: JSON Schemas are well-formed JSON
+        run: |
+          set -e
+          find contracts schemas -name '*.json' -print0 | while IFS= read -r -d '' f; do
+            python3 -m json.tool "$f" > /dev/null || { echo "Invalid JSON: $f"; exit 1; }
+            echo "ok  $f"
+          done
+
+      - name: .env.example contains placeholders only
+        run: |
+          # Fail if any value looks like a real secret (long base64/hex strings or common key prefixes).
+          if grep -Eq '=(sk-|AKIA|ghp_|xox[bp]-)|=[A-Za-z0-9+/]{32,}={0,2}$' .env.example; then
+            echo ".env.example appears to contain a real credential"; exit 1
+          fi

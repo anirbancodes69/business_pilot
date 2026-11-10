@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:schemas:configuration:cache-policy",
+  "x-version": "0.1.0",
+  "title": "CachePolicy",
+  "description": "Tenant cache policy. Its version is part of every exact-cache key (D-08).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cache_policy_version", "exact_cache", "semantic_cache"],
+  "properties": {
+    "cache_policy_version": { "type": "integer", "minimum": 1 },
+    "exact_cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "ttl_seconds_managed_sync": { "type": "integer", "minimum": 60, "default": 86400 },
+        "live_federated_enabled": { "type": "boolean", "default": false },
+        "ttl_seconds_live_federated": { "type": "integer", "minimum": 30, "maximum": 3600, "default": 300 },
+        "allow_sensitive_fields": { "type": "boolean", "default": false }
+      }
+    },
+    "semantic_cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "similarity_threshold": { "type": "number", "minimum": 0.8, "maximum": 1, "default": 0.95 },
+        "ttl_seconds": { "type": "integer", "minimum": 3600, "default": 2592000 }
+      }
+    },
+    "freshness_warning_seconds": { "type": "integer", "minimum": 60, "default": 86400 }
+  }
+}

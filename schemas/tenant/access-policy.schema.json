@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:schemas:tenant:access-policy",
+  "x-version": "0.1.0",
+  "title": "AccessPolicy",
+  "description": "Tenant RBAC grants and ABAC rules. Evaluated by the api authorization module (in-code for MVP, D-OPEN-05). Default deny.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["policy_version", "role_grants"],
+  "properties": {
+    "policy_version": { "type": "integer", "minimum": 1 },
+    "role_grants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role"],
+        "properties": {
+          "role": { "type": "string" },
+          "entities": { "type": "array", "items": { "type": "string" }, "description": "Semantic entity IDs, or '*' for all active entities." },
+          "measures": { "type": "array", "items": { "type": "string" } },
+          "dimensions": { "type": "array", "items": { "type": "string" } },
+          "permissions": { "type": "array", "items": { "type": "string" }, "description": "Non-data permissions, e.g. data_source:manage." }
+        }
+      }
+    },
+    "row_rules": {
+      "type": "array",
+      "description": "ABAC row filters applied when a role is held.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["applies_to_roles", "entity", "attribute", "operator", "user_attribute"],
+        "properties": {
+          "applies_to_roles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "entity": { "type": "string", "examples": ["branch"] },
+          "attribute": { "type": "string", "examples": ["id"] },
+          "operator": { "enum": ["eq", "in"] },
+          "user_attribute": { "type": "string", "examples": ["assigned_branch_ids", "user_id"] }
+        }
+      }
+    },
+    "column_rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entity", "attribute", "mask"],
+        "properties": {
+          "entity": { "type": "string" },
+          "attribute": { "type": "string" },
+          "mask": { "enum": ["hide", "redact", "hash"] },
+          "except_roles": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

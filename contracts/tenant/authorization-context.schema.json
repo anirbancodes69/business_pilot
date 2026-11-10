@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:contracts:tenant:authorization-context",
+  "x-version": "0.1.0",
+  "title": "AuthorizationContext",
+  "description": "Effective permissions for one user in one tenant, computed by the api. Internal to the api; never sent to ai-engine or to the LLM.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tenant_id", "user_id", "roles", "permissions", "granted", "row_filters", "column_masks", "policy_version", "authz_scope_hash"],
+  "properties": {
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "roles": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "permissions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "granted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entities", "measures", "dimensions"],
+      "properties": {
+        "entities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "measures": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "dimensions": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "row_filters": {
+      "type": "array",
+      "description": "ABAC filters with attribute values already resolved. Injected by the plan compiler.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entity", "attribute", "operator", "values"],
+        "properties": {
+          "entity": { "type": "string" },
+          "attribute": { "type": "string" },
+          "operator": { "enum": ["eq", "in"] },
+          "values": { "type": "array", "items": { "type": ["string", "number"] } }
+        }
+      }
+    },
+    "column_masks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entity", "attribute", "mask"],
+        "properties": {
+          "entity": { "type": "string" },
+          "attribute": { "type": "string" },
+          "mask": { "enum": ["hide", "redact", "hash"] }
+        }
+      }
+    },
+    "policy_version": { "type": "integer", "minimum": 1 },
+    "authz_scope_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:contracts:tenant:request-context",
+  "x-version": "0.1.0",
+  "title": "RequestContext (claims)",
+  "description": "Claims of the signed, short-lived token issued by the api per question. ai-engine treats the token as opaque and returns it on every tool call. The api verifies the signature and expiry, then reloads authorization from its own state. Signing scheme is OPEN (D-OPEN-15), to be decided in Milestone 2.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "tenant_id", "user_id", "authz_scope_hash", "semantic_model_version", "issued_at", "expires_at"],
+  "properties": {
+    "request_id": { "type": "string", "format": "uuid" },
+    "tenant_id": { "type": "string", "format": "uuid" },
+    "user_id": { "type": "string", "format": "uuid" },
+    "conversation_id": { "type": "string", "format": "uuid" },
+    "authz_scope_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "semantic_model_version": { "type": "integer", "minimum": 1 },
+    "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": 20 },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" }
+  }
+}

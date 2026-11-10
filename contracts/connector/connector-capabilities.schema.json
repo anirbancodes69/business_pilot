@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:businesspilot:contracts:connector:capabilities",
+  "x-version": "0.1.0",
+  "title": "ConnectorCapabilities",
+  "description": "Static capability descriptor published by each connector. The sync engine selects strategy from this descriptor, never from connector type.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["connector_type", "connector_version", "access_modes", "change_detection", "delete_detection", "schema_discovery", "key_strategy"],
+  "properties": {
+    "connector_type": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "connector_version": { "type": "string" },
+    "access_modes": {
+      "type": "array",
+      "items": { "enum": ["managed_sync", "live_federated"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "change_detection": {
+      "type": "array",
+      "description": "Supported incremental methods in order of preference.",
+      "items": { "enum": ["cdc_logical_replication", "cdc_binlog", "cdc_change_streams", "timestamp_cursor", "file_modified_time", "row_fingerprint", "full_snapshot_only"] },
+      "minItems": 1
+    },
+    "delete_detection": {
+      "type": "array",
+      "items": { "enum": ["native_cdc", "fingerprint_diff", "key_set_reconciliation", "none"] },
+      "minItems": 1
+    },
+    "schema_discovery": { "enum": ["catalog", "header_inference", "sampling"] },
+    "key_strategy": { "enum": ["primary_key", "document_id", "user_selected_columns"] },
+    "query_pushdown": { "enum": ["none", "sql", "mongodb_aggregation"], "default": "none" },
+    "auth_methods": {
+      "type": "array",
+      "items": { "enum": ["none", "password", "oauth2", "connection_string", "iam"] }
+    },
+    "prerequisites": {
+      "type": "array",
+      "description": "Human-readable customer-side requirements, e.g. 'wal_level=logical for CDC'.",
+      "items": { "type": "string" }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_file_bytes": { "type": "integer", "minimum": 1 },
+        "max_rows_per_object": { "type": "integer", "minimum": 1 },
+        "rate_limit_per_minute": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
