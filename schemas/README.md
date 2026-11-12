@@ -12,4 +12,4 @@ JSON Schemas (draft 2020-12) for the **tenant configuration documents** stored i
 
 Not yet written: `ai-configuration.schema.json` (language, enabled intents, recommendation checks, quotas), planned for Milestone 6.
 
-All schemas are at draft version 0.1.0. They will be refined during Milestones 2–4, and breaking changes before the first pilot are expected.
+All schemas are at draft version 0.1.0, except the semantic model at 0.2.0 (ADR-0013). They will be refined during Milestones 2–4, and breaking changes before the first pilot are expected.

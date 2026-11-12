@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
-// Runtime validator for schemas/semantic-model/semantic-model.schema.json (v0.1.0).
+// Runtime validator for schemas/semantic-model/semantic-model.schema.json (v0.2.0, ADR-0013).
 // A test compares the property names with the JSON Schema so the two cannot drift silently.
-// ADR-0013 (v1 extensions) is not decided; nothing beyond v0 is accepted here.
 
 const id = z.string().regex(/^[a-z][a-z0-9_]*$/);
 const dimensionId = z.string().regex(/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/);
@@ -43,6 +42,17 @@ const measure = z.strictObject({
       }),
     )
     .optional(),
+  metric_type: z.enum(['simple', 'ratio', 'derived']),
+  additivity: z.enum(['additive', 'semi_additive', 'non_additive']),
+  polarity: z.enum(['higher_is_better', 'lower_is_better', 'neutral']),
+  valid_dimensions: z.array(dimensionId).optional(),
+  formula_ref: z.string().min(1).optional(),
+  drivers: z
+    .array(z.strictObject({ formula_ref: z.string().min(1), components: z.array(id).min(2) }))
+    .optional(),
+  business_definition: z.string().max(2000).optional(),
+  owner: z.string().max(200).optional(),
+  certified: z.boolean().optional(),
   unit: z.enum(['currency', 'count', 'percent', 'days', 'quantity']),
   default_time_dimension: z.string().optional(),
   synonyms: synonyms.optional(),
@@ -57,6 +67,12 @@ const dimension = z.strictObject({
   type: z.enum(['categorical', 'time', 'numeric', 'boolean']),
   synonyms: synonyms.optional(),
   tags: z.array(z.enum(['pii', 'sensitive'])).optional(),
+  hierarchy: z.strictObject({ name: id, level: z.number().int().min(1) }).optional(),
+  diagnostic: z.boolean().optional(),
+  member_synonyms: z
+    .array(z.strictObject({ member: text, synonyms }))
+    .max(5000)
+    .optional(),
 });
 
 const glossaryTerm = z.strictObject({
@@ -76,6 +92,18 @@ export const semanticModelShape = {
     timezone: z.string().min(1),
     fiscal_year_start_month: z.number().int().min(1).max(12),
     number_format: z.enum(['indian', 'international']).optional(),
+    business_rules: z
+      .array(
+        z.strictObject({
+          id,
+          label: text,
+          description: z.string().max(2000).optional(),
+          value: z.number(),
+          unit: z.enum(['currency', 'count', 'percent', 'days', 'quantity']),
+        }),
+      )
+      .max(100)
+      .optional(),
   }),
   entities: z.array(entity).min(1).max(200),
   relationships: z.array(relationship).max(500).optional(),
@@ -130,11 +158,30 @@ export function validateSemanticModel(input: unknown): {
     } else if (x.aggregation !== 'count' && !x.attribute) {
       problems.push(`measure ${x.id}: ${x.aggregation} needs attribute`);
     }
+    if ((x.aggregation === 'ratio') !== (x.metric_type === 'ratio'))
+      problems.push(`measure ${x.id}: metric_type and aggregation disagree about ratio`);
+    if (x.metric_type === 'ratio' && x.additivity !== 'non_additive')
+      problems.push(`measure ${x.id}: a ratio must be non_additive`);
+    if (x.metric_type === 'derived' && !x.formula_ref)
+      problems.push(`measure ${x.id}: derived needs formula_ref`);
+    for (const dr of x.valid_dimensions ?? [])
+      if (!dims.has(dr)) problems.push(`measure ${x.id}: unknown valid dimension ${dr}`);
+    for (const dv of x.drivers ?? [])
+      for (const c of dv.components)
+        if (!measures.has(c)) problems.push(`measure ${x.id}: unknown driver component ${c}`);
     if (x.default_time_dimension && !dims.has(x.default_time_dimension))
       problems.push(`measure ${x.id}: unknown time dimension ${x.default_time_dimension}`);
   }
   for (const d of m.dimensions)
     if (!entities.has(d.entity)) problems.push(`dimension ${d.id}: unknown entity ${d.entity}`);
+  const ruleIds = (m.settings.business_rules ?? []).map((r) => r.id);
+  for (const d of duplicates(ruleIds)) problems.push(`duplicate business rule id: ${d}`);
+  const levels = new Map<string, number[]>();
+  for (const d of m.dimensions)
+    if (d.hierarchy)
+      levels.set(d.hierarchy.name, [...(levels.get(d.hierarchy.name) ?? []), d.hierarchy.level]);
+  for (const [name, ls] of levels)
+    if (new Set(ls).size !== ls.length) problems.push(`hierarchy ${name}: duplicate level`);
   for (const g of m.glossary ?? []) {
     if (!g.maps_to) continue;
     const [kind, ref] = g.maps_to.split(':') as [string, string];

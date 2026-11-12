@@ -1,6 +1,6 @@
 # Semantic business model — design
 
-**Status: design, not implemented.** The current configuration schema is [schemas/semantic-model/semantic-model.schema.json](../../schemas/semantic-model/semantic-model.schema.json) (draft v0). The extensions marked **[ADR-0013]** are proposals. They are not part of the schema until ADR-0013 is decided and the schema version is bumped.
+**Status: design, not implemented.** The current configuration schema is [schemas/semantic-model/semantic-model.schema.json](../../schemas/semantic-model/semantic-model.schema.json) (draft v0). The extensions marked **[ADR-0013]** were accepted on 2026-11-13 (D-14) and are part of schema 0.2.0. The plan compiler does not enforce them yet (Milestone 6).
 
 Exchange contract (authorized view): [contracts/semantic-model/README.md](../../contracts/semantic-model/README.md). Orchestrator use: [analyst-orchestrator.md](analyst-orchestrator.md).
 
@@ -19,12 +19,12 @@ The semantic business model is BusinessPilot's core asset (PRODUCT.md). It is th
 | `numerator`, `denominator` (ratio) | Yes | Ratio metrics such as gross margin % |
 | `expression_ref` (custom) | Yes | Vetted compiler-side expression, never free SQL |
 | `unit`, `default_time_dimension`, `tags` | Yes | Formatting, time default, PII/financial tagging |
-| `metric_type`: `simple`, `ratio`, `derived` | **No [ADR-0013]** | `derived` = formula over other metrics, evaluated by a code registry |
-| `additivity`: `additive`, `semi_additive`, `non_additive` | **No [ADR-0013]** | Prevents wrong sums. Outstanding receivables is a balance (semi-additive over time). Margin % is non-additive |
-| `polarity`: `higher_is_better`, `lower_is_better`, `neutral` | **No [ADR-0013]** | Needed for "performing poorly" and for recommendations |
-| `valid_dimensions` | **No [ADR-0013]** | Dimensions that make sense for this metric. Limits planning and decomposition |
-| `drivers` | **No [ADR-0013]** | Declared decomposition, e.g. `revenue = quantity × avg_net_price`. Used by `driver_decomposition` |
-| `business_definition`, `owner`, `certified` | **No [ADR-0013]** | The human-readable definition shown to users, who owns it, and whether a tenant admin approved it |
+| `metric_type`: `simple`, `ratio`, `derived` | Yes (0.2.0) | `derived` = formula over other metrics, evaluated by a code registry |
+| `additivity`: `additive`, `semi_additive`, `non_additive` | Yes (0.2.0) | Prevents wrong sums. Outstanding receivables is a balance (semi-additive over time). Margin % is non-additive |
+| `polarity`: `higher_is_better`, `lower_is_better`, `neutral` | Yes (0.2.0) | Needed for "performing poorly" and for recommendations |
+| `valid_dimensions` | Yes (0.2.0) | Dimensions that make sense for this metric. Limits planning and decomposition |
+| `drivers` | Yes (0.2.0) | Declared decomposition, e.g. `revenue = quantity × avg_net_price`. Used by `driver_decomposition` |
+| `business_definition`, `owner`, `certified` | Yes (0.2.0) | The human-readable definition shown to users, who owns it, and whether a tenant admin approved it |
 
 ### 2.2 Dimensions (schema: `dimensions`)
 

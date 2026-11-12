@@ -1,8 +1,8 @@
 # ADR-0013: Semantic model v1 extensions
 
-- **Status:** OPEN (awaiting product-owner decision)
+- **Status:** Accepted (option A, confirmed by the product owner 2026-11-13)
 - **Date:** 2026-11-13
-- **Decision items:** D-OPEN-22
+- **Decision items:** D-14 (formerly D-OPEN-22)
 
 ## Context
 

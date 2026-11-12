@@ -25,6 +25,21 @@ describe('semantic model validator', () => {
     );
   });
 
+  it('has the same measure and dimension properties as the JSON Schema', () => {
+    const js = jsonSchema as unknown as {
+      properties: {
+        measures: { items: { properties: object } };
+        dimensions: { items: { properties: object } };
+      };
+    };
+    const sample = validModel();
+    const keysOf = (items: object[]) => new Set(items.flatMap((i) => Object.keys(i)));
+    for (const k of keysOf(sample.measures))
+      expect(Object.keys(js.properties.measures.items.properties)).toContain(k);
+    for (const k of keysOf(sample.dimensions))
+      expect(Object.keys(js.properties.dimensions.items.properties)).toContain(k);
+  });
+
   it('rejects unknown properties (no physical SQL or hidden fields)', () => {
     const m = { ...validModel(), sql: 'select 1' };
     expect(validateSemanticModel(m).problems.length).toBeGreaterThan(0);
@@ -57,10 +72,44 @@ describe('semantic model validator', () => {
       label: 'X',
       entity: 'invoice',
       aggregation: 'custom',
+      metric_type: 'simple',
+      additivity: 'additive',
+      polarity: 'neutral',
       unit: 'count',
     } as never);
     const p = validateSemanticModel(m).problems.join('\n');
     expect(p).toContain('sum needs attribute');
     expect(p).toContain('custom needs expression_ref');
+  });
+
+  it('enforces ADR-0013 rules', () => {
+    const m = validModel();
+    m.measures[2]!.additivity = 'additive';
+    m.measures[2]!.valid_dimensions = ['ghost.dim'];
+    m.measures.push({
+      id: 'd',
+      label: 'D',
+      entity: 'invoice',
+      aggregation: 'custom',
+      expression_ref: 'e',
+      metric_type: 'derived',
+      additivity: 'non_additive',
+      polarity: 'neutral',
+      unit: 'count',
+      drivers: [{ formula_ref: 'f', components: ['revenue', 'nope'] }],
+    } as never);
+    m.dimensions[0]!.hierarchy = { name: 'geo', level: 2 };
+    const p = validateSemanticModel(m).problems.join('\n');
+    expect(p).toContain('a ratio must be non_additive');
+    expect(p).toContain('unknown valid dimension ghost.dim');
+    expect(p).toContain('derived needs formula_ref');
+    expect(p).toContain('unknown driver component nope');
+    expect(p).toContain('hierarchy geo: duplicate level');
+  });
+
+  it('requires additivity and polarity', () => {
+    const m = validModel();
+    delete (m.measures[0] as { additivity?: string }).additivity;
+    expect(validateSemanticModel(m).problems.join()).toContain('additivity');
   });
 });
