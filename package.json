@@ -17,7 +17,8 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "stack:up": "docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --build --wait",
     "stack:up:observability": "OTEL_TRACES_EXPORTER=otlp docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile observability up -d --build --wait",
-    "stack:down": "docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile observability down"
+    "stack:down": "docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile observability down",
+    "test:isolation": "pnpm --filter @businesspilot/api test:isolation"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

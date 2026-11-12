@@ -26,6 +26,8 @@ packages = ["src/ai_engine"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Do not depend on the editable-install .pth file: macOS can flag it hidden, and Python then ignores it.
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
@@ -40,3 +42,4 @@ select = ["E", "F", "I", "B", "UP", "S"]
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
+mypy_path = "src"
