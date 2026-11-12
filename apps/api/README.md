@@ -1,6 +1,6 @@
 # apps/api — NestJS modular monolith
 
-**Status: skeleton** (Milestone 1; see [CURRENT.md](../../CURRENT.md)). Implemented: both entrypoints, `/health/live` and `/health/ready`, request_id middleware, OpenTelemetry, Zod-validated config, Kysely setup in `src/platform/database` (no tables yet). Worker only exposes a health port until the first job exists.
+**Status: skeleton** (Milestone 1; see [CURRENT.md](../../CURRENT.md)). Implemented: both entrypoints, health endpoints, request_id, OpenTelemetry, Zod config; Milestone 2 security foundation (control-plane migrations with forced RLS, `withTenantTx`, OIDC token verification, membership-checked tenant selection, RBAC with the AuthorizationContext builder, audit events, envelope encryption, signed RequestContext); endpoints `/v1/me`, `/v1/tenant`, `/v1/memberships`, `/v1/audit-events`. Worker only exposes a health port until the first job exists.
 
 One codebase, two process types:
 
