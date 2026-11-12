@@ -1,6 +1,6 @@
 # Tenant and control-plane model
 
-These are the proposed control-plane entities (PostgreSQL schema `core`). They are not implemented. Every entity except `tenant`, `app_user` and platform tables carries `tenant_id` and is RLS-protected.
+These are the control-plane entities (PostgreSQL schema `core`). Implemented in Milestone 2: `tenant` (plus `key_id` and `wrapped_data_key`), `app_user`, `tenant_membership`, `role`, `permission`, `role_permission`, `membership_role`, `access_policy` (table only, not evaluated yet) and `audit_event`. All other entities are still proposed. Every entity except `tenant`, `app_user` and platform tables carries `tenant_id` and is RLS-protected.
 
 | Entity | Key fields | Notes |
 |---|---|---|

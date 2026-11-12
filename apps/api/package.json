@@ -9,7 +9,8 @@
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "db:migrate": "node dist/platform/database/migrate.js"
+    "db:migrate": "node dist/platform/database/migrate.js",
+    "test:isolation": "vitest run --config vitest.isolation.config.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
@@ -22,6 +23,7 @@
     "@opentelemetry/resources": "^2.0.0",
     "@opentelemetry/sdk-trace-node": "^2.0.0",
     "@opentelemetry/semantic-conventions": "^1.30.0",
+    "jose": "^6.2.17",
     "kysely": "^0.28.0",
     "pg": "^8.13.0",
     "reflect-metadata": "^0.2.2",

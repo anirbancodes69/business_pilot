@@ -10,7 +10,7 @@ RUN pnpm install --frozen-lockfile --filter @businesspilot/api...
 COPY apps/api apps/api
 RUN pnpm --filter @businesspilot/api build \
  && pnpm --filter @businesspilot/api deploy --legacy --prod /out \
- && cp -r apps/api/dist /out/dist && cp -r apps/api/migrations /out/migrations
+ && cp -r apps/api/dist /out/dist
 
 FROM node:24-slim
 ENV NODE_ENV=production

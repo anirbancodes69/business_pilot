@@ -4,9 +4,9 @@
 
 **Project status:** Milestone 1 (repository foundation) is complete and merged to `main` (PR #1, CI green on `main`). Only skeletons exist: health endpoints, telemetry and infrastructure. **No product feature exists.** Product direction: AI Business Analyst (documented 2026-11-13).
 
-**Current milestone:** [Milestone 2](ROADMAP.md#milestone-2--tenant-management-and-security), not started.
+**Current milestone:** [Milestone 2](ROADMAP.md#milestone-2--tenant-management-and-security), implemented on branch `feature/m2-tenant-security` (not merged).
 
-**Last updated:** 2026-11-13 (AI Business Analyst product direction documented)
+**Last updated:** 2026-11-13 (Milestone 2 implemented locally)
 
 ## Implemented
 
@@ -18,6 +18,12 @@
   - `infrastructure/docker/compose.yaml`: postgres 16, Redis Stack (`noeviction`, AOF, password), minio, web, api, worker, ai-engine, optional `observability` profile. Verified: `up --wait` brought all 8 services healthy, with Redis settings, the `bp_app` role (no superuser, no BYPASSRLS) and the migrator checked.
   - Trace verified: one Tempo trace spans `bp-api` (GET) → `ai-engine.health` → `bp-ai-engine` (GET /health), and `request_id` is the same on all three spans.
   - `pnpm lint`, `pnpm typecheck`, `pnpm test` (13 api, 1 web, 3 ai-engine tests) and `pnpm build` pass. `pnpm audit --prod` shows one moderate finding; `pip-audit` shows none.
+- **Milestone 2 security foundation (branch `feature/m2-tenant-security`, run locally 2026-11-13, CI not yet run):**
+  - Migrations for `core.tenant`, `app_user`, `permission`, `role`, `role_permission`, `tenant_membership`, `membership_role`, `access_policy`, `audit_event`, with RLS enabled and forced, the two P-15 exceptions, system roles and a permission catalog. Roles `bp_owner` (non-superuser), `bp_app`, `bp_system` (no login yet).
+  - `withTenantTx` / `withUserTx` (context via `set_config(..., true)`), tenant provisioning, OIDC token verification, membership-checked tenant selection, RBAC and the AuthorizationContext builder with `authz_scope_hash` (default deny), audit events (append-only for the app role), envelope encryption behind a `KeyManagement` port (local adapter), HMAC-signed RequestContext and a service-token guard.
+  - Endpoints: `GET /v1/me`, `/v1/tenant`, `/v1/memberships`, `/v1/memberships/:id`, `PUT /v1/memberships/:id/roles`, `GET /v1/audit-events`.
+  - Tests: 40 api unit tests; 26 isolation tests against real PostgreSQL (TI-01 to TI-05 and TI-15, plus RBAC and audit). The suite was checked to fail when protections are weakened (FORCE RLS removed, a policy dropped, an extra `bp_system` grant). Compose: all services healthy, one-off `migrate` job applies as `bp_owner`, the api container has no owner credentials.
+  - Decisions recorded as Proposed in [ADR-0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) (P-18 to P-20). CI has a new `tenant-isolation` job; it has not run on GitHub yet.
 - Documentation (including the AI development workflow), ADRs, interface contracts and configuration schemas (Markdown and JSON Schema, draft v0). These are designs, not working software.
 - `.github/workflows/ci.yml`: all five jobs (docs, apps, secret scan including gitleaks, dependency audit, Compose smoke) passed on GitHub for branch `feature/repo-foundation` (run 42916869932) and again on `main` after the merge (run 42918295849, commit 1b0193a). CI runs on pushes to `main` and `feature/**`, and on pull requests.
 - Verified locally on 2026-11-11: all JSON files parse and all relative Markdown links resolve (checked with the CI script).
@@ -53,7 +59,7 @@
 
 ## In progress
 
-- Documentation of the AI Business Analyst direction on branch `docs/ai-analyst-direction` (not merged).
+- Review and merge of `feature/m2-tenant-security` (Milestone 2).
 
 ## Pending (next milestones)
 
@@ -62,6 +68,12 @@
 - Milestones 3–10: see [ROADMAP.md](ROADMAP.md).
 
 ## Known issues and risks
+
+- **Milestone 2 not verified end to end with a real identity provider.** Token verification is tested with locally generated keys and a fake verifier in the API tests. No OIDC vendor is chosen (D-OPEN-03b). Real discovery and JWKS fetching are untested.
+- **Not done in Milestone 2 (by design):** ABAC row filters and column masks (need the semantic model, M3); `access_policy` is stored but not evaluated, so `policy_version` is fixed at 1; entity and measure permissions (M3); there is no tenant sign-up or invitation endpoint (provisioning is a service method, M9 adds invitations); no rate limiting, CSRF or CORS configuration yet; tenant deletion and crypto-shredding are not implemented (the per-tenant key exists); the ai-engine does not use the RequestContext yet (M6); `/internal/*` endpoints do not exist yet (only the guard).
+- **Contract text:** `contracts/tenant/request-context.schema.json` still says the signing scheme is OPEN. Update it when ADR-0014 is accepted.
+- **macOS quirk:** Python can ignore the editable-install `.pth` file when macOS flags it hidden. Tests no longer depend on it (`pythonpath`), but `uv run` of the installed package can fail locally.
+- A user's `idp_subject`, email and name are stored in `core.app_user`, a global table. Personal data handling for it is not yet covered in [docs/security/data-handling.md](docs/security/data-handling.md).
 
 - **Product direction vs accepted decisions (2026-11-13):** the AI Business Analyst direction conflicts with, or extends, existing documents in these places. Each is recorded as an OPEN decision rather than resolved silently:
   - C1, multi-step investigation vs D-07 / ADR-0006 §4 (breakdowns declared up front, "never decides to keep exploring"). Proposed bounded adaptive investigation: [ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md), D-OPEN-19. ADR-0006 §4 stays in force until it is decided.
@@ -95,10 +107,10 @@
 
 ## Important technical decisions
 
-See [DECISIONS.md](DECISIONS.md): 13 Accepted, 15 Proposed, 22 OPEN. In summary: shared SaaS first, with portable architecture; hybrid relational and vector storage; layered tenant isolation (application authorization plus PostgreSQL RLS); the LLM never decides permissions; a deterministic pipeline producing validated query plans; a sync engine independent of AI; a modular monolith plus a separate AI engine; no Kafka or Kubernetes.
+See [DECISIONS.md](DECISIONS.md): 13 Accepted, 18 Proposed, 21 OPEN. In summary: shared SaaS first, with portable architecture; hybrid relational and vector storage; layered tenant isolation (application authorization plus PostgreSQL RLS); the LLM never decides permissions; a deterministic pipeline producing validated query plans; a sync engine independent of AI; a modular monolith plus a separate AI engine; no Kafka or Kubernetes.
 
 ## Next three actionable tasks
 
-1. **Tenant isolation foundation (M2):** migrations for `tenant`, `app_user`, `tenant_membership`; the roles `bp_owner` (non-superuser), `bp_app` and `bp_system`; RLS policies including the membership-lookup exception; the `withTenantTx` helper using `SET LOCAL`; isolation tests TI-01 to TI-05 and TI-15.
-2. **Decide D-OPEN-03 (identity provider) and D-OPEN-15 (service authentication, RequestContext signing)**, needed for M2.
-3. **Product-owner review of ADR-0010 to ADR-0013 and D-OPEN-23.** ADR-0013 (semantic model v1) is needed before M3. The others are needed before M6.
+1. **Review and merge Milestone 2**, confirm the `tenant-isolation` CI job passes on GitHub, and choose the identity provider vendor (D-OPEN-03b).
+2. **Milestone 3 start:** decide ADR-0013 (semantic model v1), then the configuration service, the `wholesale_distribution v0` template and the semantic model, ABAC row filters and column masks, and entity and measure permissions.
+3. **Update `data-handling.md` and the RequestContext contract text** for the stored identity data and the accepted signing scheme.

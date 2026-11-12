@@ -82,6 +82,30 @@ jobs:
       - name: Build
         run: pnpm build
 
+  tenant-isolation:
+    # Mandatory suite (docs/security/tenant-isolation-tests.md). A failure blocks merges.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Start PostgreSQL with the real role setup
+        run: |
+          ./scripts/setup-local-env.sh
+          docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --wait postgres
+      - name: Tenant isolation tests (TI-01 to TI-05, TI-15)
+        run: pnpm test:isolation
+      - name: Logs on failure
+        if: failure()
+        run: docker compose --env-file .env -f infrastructure/docker/compose.yaml logs --no-color --tail 100 postgres
+      - name: Tear down
+        if: always()
+        run: docker compose --env-file .env -f infrastructure/docker/compose.yaml down -v
+
   secret-scan:
     runs-on: ubuntu-latest
     steps:
@@ -117,6 +141,8 @@ jobs:
         run: ./scripts/setup-local-env.sh
       - name: All services become healthy
         run: docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --build --wait --wait-timeout 300
+      - name: Migrations apply as bp_owner
+        run: docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile tools run --rm migrate
       - name: Logs on failure
         if: failure()
         run: docker compose --env-file .env -f infrastructure/docker/compose.yaml logs --no-color --tail 100
