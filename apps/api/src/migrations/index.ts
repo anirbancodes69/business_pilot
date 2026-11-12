@@ -1,0 +1,13 @@
+import type { Migration, MigrationProvider } from 'kysely';
+import * as m0001 from './0001_control_plane';
+import * as m0002 from './0002_system_roles';
+
+// Forward-only migrations (ADR-0009). Names sort in application order. No down migrations.
+const migrations: Record<string, Migration> = {
+  '0001_control_plane': { up: m0001.up },
+  '0002_system_roles': { up: m0002.up },
+};
+
+export const migrationProvider: MigrationProvider = {
+  getMigrations: () => Promise.resolve(migrations),
+};

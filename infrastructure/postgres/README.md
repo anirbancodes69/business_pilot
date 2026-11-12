@@ -1,6 +1,6 @@
 # infrastructure/postgres
 
-**Status: partial.** `init/01-roles.sh` creates only the `bp_app` login role (no superuser, no BYPASSRLS) on first start. In the local image `bp_owner` is the bootstrap superuser. The full role model, grants and RLS are Milestone 2. Application migrations live in `apps/api`.
+**Status: implemented for Milestone 2.** `init/01-roles.sh` runs once on first start as a bootstrap superuser (administration only) and creates `bp_owner` (database owner, runs migrations), `bp_app` (runtime) and `bp_system` (no login yet). None of them is a superuser or has BYPASSRLS. Grants, schemas, tables and RLS policies come from the migrations in `apps/api/src/migrations`. `bp_platform` is not created yet. Changing the init script needs a fresh data volume (`down -v`). Application migrations live in `apps/api`.
 
 Required roles (see [SECURITY.md §4](../../SECURITY.md#4-tenant-isolation-in-postgresql)):
 

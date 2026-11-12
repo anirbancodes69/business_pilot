@@ -1,11 +1,23 @@
 #!/bin/sh
-# Runs once on first start of an empty data directory (docker-entrypoint-initdb.d).
-# Creates the runtime role. It owns nothing and cannot bypass RLS.
-# Milestone 2 defines the full role model (bp_owner, bp_app, bp_system), grants and RLS policies.
-# NOTE: in this image POSTGRES_USER (bp_owner) is a superuser. Local development only.
+# Runs once on first start of an empty data directory (docker-entrypoint-initdb.d), as the
+# bootstrap superuser (POSTGRES_USER, which only exists for administration and is never used by the app).
+# Role model (SECURITY.md section 4):
+#   bp_owner  owns the database and schemas, runs migrations. No superuser, no BYPASSRLS.
+#   bp_app    runtime role for api and worker. Owns nothing. No BYPASSRLS.
+#   bp_system worker system tasks (P-15). NOLOGIN until the worker needs it (Milestone 5).
+# Table grants are made by the migrations, not here.
 set -eu
-psql -v ON_ERROR_STOP=1 -v app_user="$POSTGRES_APP_USER" -v app_pw="$POSTGRES_APP_PASSWORD" \
+psql -v ON_ERROR_STOP=1 \
+  -v owner_user="$POSTGRES_OWNER_USER" -v owner_pw="$POSTGRES_OWNER_PASSWORD" \
+  -v app_user="$POSTGRES_APP_USER" -v app_pw="$POSTGRES_APP_PASSWORD" \
   --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<'SQL'
+CREATE ROLE :"owner_user" LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD :'owner_pw';
 CREATE ROLE :"app_user" LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD :'app_pw';
-GRANT CONNECT ON DATABASE :"DBNAME" TO :"app_user";
+CREATE ROLE bp_system NOLOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+-- The owner may assume bp_system (SET ROLE) so tests and operators can verify its limits. bp_app may not.
+GRANT bp_system TO :"owner_user";
+ALTER DATABASE :"DBNAME" OWNER TO :"owner_user";
+REVOKE ALL ON DATABASE :"DBNAME" FROM PUBLIC;
+GRANT CONNECT ON DATABASE :"DBNAME" TO :"app_user", bp_system;
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 SQL

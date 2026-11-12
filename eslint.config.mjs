@@ -26,7 +26,7 @@ export default tseslint.config(
   {
     // Rule: only the platform module may use the raw Kysely instance or pg pool (ADR-0009).
     files: ['apps/api/src/**/*.ts'],
-    ignores: ['apps/api/src/platform/**'],
+    ignores: ['apps/api/src/platform/**', 'apps/api/src/migrations/**'],
     rules: {
       'no-restricted-imports': [
         'error',
