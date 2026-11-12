@@ -5,6 +5,7 @@ import {
   semanticModelShape,
   validateSemanticModel,
 } from '../src/configuration/semantic-model.validator';
+import { wholesaleDistributionTemplate } from '../src/configuration/templates/wholesale-distribution';
 import { validModel } from './fixtures/semantic-model';
 
 const jsonSchema = JSON.parse(
@@ -111,5 +112,11 @@ describe('semantic model validator', () => {
     const m = validModel();
     delete (m.measures[0] as { additivity?: string }).additivity;
     expect(validateSemanticModel(m).problems.join()).toContain('additivity');
+  });
+});
+
+describe('wholesale_distribution template', () => {
+  it('is a valid semantic model', () => {
+    expect(validateSemanticModel(wholesaleDistributionTemplate()).problems).toEqual([]);
   });
 });

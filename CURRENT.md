@@ -25,6 +25,7 @@
   - Tests: 40 api unit tests; 26 isolation tests against real PostgreSQL (TI-01 to TI-05 and TI-15, plus RBAC and audit). The suite was checked to fail when protections are weakened (FORCE RLS removed, a policy dropped, an extra `bp_system` grant). Compose: all services healthy, one-off `migrate` job applies as `bp_owner`, the api container has no owner credentials.
   - Decisions recorded as Proposed in [ADR-0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) (P-18 to P-20). CI has a new `tenant-isolation` job; it has not run on GitHub yet.
 - **Milestone 3, first slice (branch `feature/m3-semantic-model`, run locally 2026-11-13, CI not yet run):** `core.semantic_model` (migration 0003, forced RLS, one published version per tenant, trigger that makes published documents immutable); Zod validator for schema v0.1.0 with reference checks (`src/configuration/`); endpoints `GET/POST /v1/semantic-models`, `GET/PUT /v1/semantic-models/:version` (drafts only), `POST /v1/semantic-models/:version/publish` (separate `semantic_model:publish` permission, audited, retires the previous version). Tests: 6 validator unit tests (49 api unit tests in total after the ADR-0013 extension) and 4 isolation tests (30 isolation tests in total, TI-04 and TI-02 cover the new table from the catalog). Lint, typecheck and both suites pass.
+  - **E3.2 (2026-11-13, run locally, CI not yet run):** migration 0004 creates schema `analytics` with the ten `wholesale_distribution` v0 canonical tables (forced RLS, tenant-scoped composite foreign keys, soft delete; the app role can select, insert and update but not delete; `bp_system` has no access). The default semantic model (`src/configuration/templates/wholesale-distribution.ts`: 7 entities, 12 measures, 13 dimensions, business rules) is valid against the validator, and a test checks every table and attribute it names against the migrated schema. `POST /v1/semantic-models/from-template` creates a draft from it. Tests now: 50 api unit, 34 isolation. TI-15 was changed to ask privileges by role name, and now also checks schema usage. Nothing writes analytics rows yet (M4/M5), and `data_source_id` has no foreign key until data sources exist.
 - Documentation (including the AI development workflow), ADRs, interface contracts and configuration schemas (Markdown and JSON Schema, draft v0). These are designs, not working software.
 - `.github/workflows/ci.yml`: all five jobs (docs, apps, secret scan including gitleaks, dependency audit, Compose smoke) passed on GitHub for branch `feature/repo-foundation` (run 42916869932) and again on `main` after the merge (run 42918295849, commit 1b0193a). CI runs on pushes to `main` and `feature/**`, and on pull requests.
 - Verified locally on 2026-11-11: all JSON files parse and all relative Markdown links resolve (checked with the CI script).
@@ -60,7 +61,7 @@
 
 ## In progress
 
-- Milestone 3 (`feature/m3-semantic-model`): E3.1 done for the semantic model. E3.0 done (ADR-0013 accepted, schema and validator at 0.2.0). Not started: E3.2 template and `analytics` tables, E3.3 authorized view builder, E3.4 ABAC.
+- Milestone 3 (`feature/m3-semantic-model`): E3.1 done for the semantic model. E3.0 done (ADR-0013 accepted, schema and validator at 0.2.0). E3.2 done. Not started: E3.3 authorized view builder, E3.4 ABAC.
 
 ## Pending (next milestones)
 
@@ -104,7 +105,7 @@
 - `schemas/` (configuration) and `contracts/` (component interfaces) both hold JSON Schemas. Their roles are defined in [contracts/README.md](contracts/README.md). Generated validators must stay in sync with them.
 - The three `packages/*` folders are placeholders. Create each package only when the first code needs it, to avoid empty build machinery.
 - No schema exists yet for the `ai_configuration` document (planned for M6).
-- The wholesale-distribution template entities and all numeric defaults (TTLs, thresholds, retention periods, limits) are unvalidated hypotheses.
+- The wholesale-distribution template (entities, measure definitions, `overdue_days = 0`, `slow_moving_days = 120`) and all numeric defaults (TTLs, thresholds, retention periods, limits) are unvalidated hypotheses.
 
 ## Important technical decisions
 
@@ -112,6 +113,6 @@ See [DECISIONS.md](DECISIONS.md): 14 Accepted, 18 Proposed, 20 OPEN. In summary:
 
 ## Next three actionable tasks
 
-1. **Build the `wholesale_distribution` template and `analytics` tables (E3.2)** on semantic model schema 0.2.0 (ADR-0013 accepted, D-14). Also confirm the `tenant-isolation` CI job on GitHub and choose the identity provider (D-OPEN-03b).
-2. **E3.3 and E3.4:** authorized view builder, entity and measure permissions, ABAC row filters and column masks (TI-14).
+1. **E3.3 authorized view builder**, then E3.4. Also confirm the `tenant-isolation` CI job on GitHub and choose the identity provider (D-OPEN-03b).
+2. **E3.4:** entity and measure permissions, ABAC row filters and column masks (TI-14).
 3. **Update `data-handling.md` and the RequestContext contract text** for the stored identity data and the accepted signing scheme.

@@ -12,11 +12,13 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { z } from 'zod';
 import { AuditService } from '../audit/audit.service';
 import { PermissionGuard, RequirePermission } from '../authorization/permissions';
 import { AuthGuard, TenantGuard } from '../identity/auth.guard';
 import type { AuthedRequest } from '../identity/auth.types';
 import { DatabaseService } from '../platform/database/database.module';
+import { TEMPLATES } from './templates/wholesale-distribution';
 import { validateSemanticModel } from './semantic-model.validator';
 
 function versionParam(value: string): number {
@@ -102,6 +104,16 @@ export class SemanticModelController {
       });
       return { version, status: 'draft' as const };
     });
+  }
+
+  /** Creates the next draft from a built-in template. It still needs review and a separate publish. */
+  @Post('from-template')
+  @RequirePermission('semantic_model:manage')
+  createFromTemplate(@Req() req: AuthedRequest, @Body() body: unknown) {
+    const parsed = z.strictObject({ template: z.string() }).safeParse(body);
+    const make = parsed.success ? TEMPLATES[parsed.data.template] : undefined;
+    if (!make) throw new BadRequestException('unknown template');
+    return this.create(req, make());
   }
 
   @Put(':version')

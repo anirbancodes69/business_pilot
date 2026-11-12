@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../../src/app.module';
 import { TokenVerifier, UnauthenticatedError } from '../../src/identity/token-verifier';
 import { requestIdMiddleware } from '../../src/platform/request-id/request-id';
+import { wholesaleDistributionTemplate } from '../../src/configuration/templates/wholesale-distribution';
 import { validModel } from '../fixtures/semantic-model';
 import { createFixture, type Fixture } from './harness';
 
@@ -166,5 +167,83 @@ describe('semantic model versions (E3.1)', () => {
     expect(
       (await call('/v1/semantic-models', { token: 'viewerA', tenant: f.A.tenantId })).status,
     ).toBe(403);
+  });
+});
+
+describe('wholesale_distribution template (E3.2)', () => {
+  it('every entity table and attribute exists in the migrated analytics schema', async () => {
+    const m = wholesaleDistributionTemplate();
+    const cols = await sql<{ t: string; c: string }>`
+      select table_schema || '.' || table_name as t, column_name as c
+      from information_schema.columns where table_schema = 'analytics'`.execute(f.raw);
+    const have = new Set(cols.rows.map((r) => `${r.t}.${r.c}`));
+    const table = new Map(m.entities.map((e) => [e.id, e.table]));
+    const need: string[] = [];
+    for (const e of m.entities) need.push(`${e.table}.tenant_id`);
+    for (const d of m.dimensions) need.push(`${table.get(d.entity)}.${d.attribute}`);
+    for (const x of m.measures) if (x.attribute) need.push(`${table.get(x.entity)}.${x.attribute}`);
+    for (const r of m.relationships ?? [])
+      for (const [fromCol, toCol] of r.on) {
+        need.push(`${table.get(r.from)}.${fromCol}`, `${table.get(r.to)}.${toCol}`);
+      }
+    expect(need.filter((n) => !have.has(n))).toEqual([]);
+  });
+
+  it('creates a draft from the template, which an admin can publish; unknown templates are rejected', async () => {
+    const a = { token: 'ownerA', tenant: f.A.tenantId, method: 'POST' };
+    const bad = await call('/v1/semantic-models/from-template', {
+      ...a,
+      body: { template: 'nope' },
+    });
+    expect(bad.status).toBe(400);
+    const ok = await call('/v1/semantic-models/from-template', {
+      ...a,
+      body: { template: 'wholesale_distribution' },
+    });
+    expect(ok.status).toBe(201);
+    const { version } = (await ok.json()) as { version: number };
+    expect((await call(`/v1/semantic-models/${version}/publish`, a)).status).toBe(201);
+  });
+
+  it('application role can read and write analytics rows only inside its tenant, and cannot delete', async () => {
+    const ds = '11111111-1111-4111-8111-111111111111';
+    await f.db.tenantTx(f.A.tenantId, (tx) =>
+      sql`insert into analytics.branch (tenant_id, data_source_id, source_key, code, name)
+          values (${f.A.tenantId}, ${ds}, 'B1', 'B1', 'Pune')`.execute(tx),
+    );
+    // the same natural key in tenant B is allowed and invisible to A
+    await f.db.tenantTx(f.B.tenantId, (tx) =>
+      sql`insert into analytics.branch (tenant_id, data_source_id, source_key, code, name)
+          values (${f.B.tenantId}, ${ds}, 'B1', 'B1', 'Delhi')`.execute(tx),
+    );
+    const seenByA = await f.db.tenantTx(f.A.tenantId, (tx) =>
+      sql<{ name: string }>`select name from analytics.branch`.execute(tx),
+    );
+    expect(seenByA.rows.map((r) => r.name)).toEqual(['Pune']);
+    await expect(
+      f.db.tenantTx(f.A.tenantId, (tx) =>
+        sql`insert into analytics.branch (tenant_id, data_source_id, source_key, name)
+            values (${f.B.tenantId}, ${ds}, 'X', 'Leak')`.execute(tx),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      f.db.tenantTx(f.A.tenantId, (tx) => sql`delete from analytics.branch`.execute(tx)),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it("a foreign key cannot point at another tenant's row", async () => {
+    const ds = '22222222-2222-4222-8222-222222222222';
+    const branchB = await f.db.tenantTx(
+      f.B.tenantId,
+      async (tx) =>
+        (await sql<{ id: string }>`select id from analytics.branch limit 1`.execute(tx)).rows[0]!
+          .id,
+    );
+    await expect(
+      f.db.tenantTx(f.A.tenantId, (tx) =>
+        sql`insert into analytics.customer (tenant_id, data_source_id, source_key, name, branch_id)
+            values (${f.A.tenantId}, ${ds}, 'C1', 'X', ${branchB})`.execute(tx),
+      ),
+    ).rejects.toThrow(/foreign key/);
   });
 });

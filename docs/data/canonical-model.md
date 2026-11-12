@@ -1,6 +1,6 @@
 # Canonical business model and mapping
 
-Decision: [ADR-0002](../adr/ADR-0002-data-storage-strategy.md) (P-11). Not implemented.
+Decision: [ADR-0002](../adr/ADR-0002-data-storage-strategy.md) (P-11). The `wholesale_distribution` v0 tables exist in `analytics` (migration 0004) and a default semantic model exists as code (`apps/api/src/configuration/templates/`). Mapping and sync are not implemented.
 
 ## Industry templates
 
