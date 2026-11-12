@@ -18,8 +18,11 @@ uv sync --directory apps/ai-engine
 pnpm stack:up                              # builds and starts everything; waits until all services are healthy
 pnpm stack:up:observability                # same, plus a local Grafana stack on http://127.0.0.1:3100 (traces)
 pnpm stack:down
-pnpm --filter @businesspilot/api db:migrate   # no migrations exist yet; runs as bp_owner against the Compose database
+docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile tools run --rm migrate   # migrations, as bp_owner
+pnpm test:isolation                        # tenant isolation suite; needs the postgres service running and migrated (it migrates itself)
 ```
+
+For host-side commands (`pnpm test:isolation`, `pnpm --filter @businesspilot/api db:migrate`) the database must be reachable at `POSTGRES_HOST`/`POSTGRES_PORT` from `.env`. Authentication needs `OIDC_ISSUER_URL` and `OIDC_CLIENT_ID`; without them every authenticated route returns 401. Local macOS note: Python may ignore the editable-install `.pth` file when macOS flags it hidden. Tests therefore put `src` on the path explicitly.
 
 Health: web `:3000/api/health`, api `:3001/health/live` and `/health/ready` (checks Postgres and ai-engine), worker `:3002/health/*` (container only), ai-engine `:8000/health`. Host ports bind to 127.0.0.1.
 
@@ -59,7 +62,7 @@ Running apps outside Docker *(planned convenience; not verified)*: `pnpm --filte
 |---|---|---|
 | All unit tests (TS and Python), one command | `pnpm test` | Always |
 | TS integration *(planned)* (real PostgreSQL and Redis through Compose) | `pnpm test:integration` | Any change to data access, sync, cache, jobs |
-| **Tenant isolation** *(planned, M2)* | `pnpm test:isolation` | Any change to data access, cache, retrieval, jobs, storage. Blocks release if failing |
+| **Tenant isolation** | `pnpm test:isolation` | Any change to data access, cache, retrieval, jobs, storage. Blocks release if failing |
 | Python unit only | `uv run --directory apps/ai-engine pytest` | Always for ai-engine |
 | AI evaluation *(planned)* | `uv run python -m evaluation.run --suite golden` | Prompt, model, planner or semantic layer changes |
 | Lint and types (TS and Python) | `pnpm lint && pnpm typecheck` | Always |

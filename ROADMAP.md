@@ -4,7 +4,7 @@ Ordering principle: reach a **working vertical slice** fast. The slice is one pi
 
 Where a later milestone's items are needed by the slice, a thin version is pulled forward, and each milestone says what it defers.
 
-Status of every milestone: Milestone 1 **Completed** (merged 2026-11-11, PR #1); all others **Not started** (see [CURRENT.md](CURRENT.md)).
+Status of every milestone: Milestone 1 **Completed** (merged 2026-11-11, PR #1); Milestone 2 **Implemented on branch `feature/m2-tenant-security`, pending review** (see [CURRENT.md](CURRENT.md)); all others **Not started** (see [CURRENT.md](CURRENT.md)).
 
 ---
 

@@ -47,6 +47,9 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | P-15 | Two narrowly scoped exceptions to per-tenant RLS: (a) a membership-lookup policy keyed on `app.user_id`, for tenant selection at login; (b) a `bp_system` role for worker system tasks (outbox relay, scheduler, retention sweeps), granted only on named control-plane tables and with no access to `analytics`. | [0003](docs/adr/ADR-0003-tenant-isolation.md) |
 | P-16 | ai-engine computes all embeddings (query time and indexing). api and worker store and search vectors and never call embedding providers. | [0006](docs/adr/ADR-0006-ai-orchestration.md) |
 | P-17 | The planner emits time ranges either as relative tokens (for example `last_month`, `fiscal_ytd`) or as absolute dates. A deterministic resolver converts them to absolute dates before validation. The LLM does no date arithmetic. | [0006](docs/adr/ADR-0006-ai-orchestration.md) |
+| P-18 | Authentication through an external OIDC provider. The api verifies tokens and reads identity only. Tenant selection is a request checked against membership. No provider configured means every authenticated route fails closed (formerly D-OPEN-03, approach only). | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
+| P-19 | Service trust (MVP): a shared service token for internal endpoints, plus an HMAC-SHA256 signed, 2-minute RequestContext bound to the request ID, with key rotation overlap (formerly D-OPEN-15). | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
+| P-20 | RLS details: `set_config(..., true)` as the parameterized form of `SET LOCAL`; `app_user` and `permission` as the only non-RLS global tables; non-superuser `bp_owner`; `bp_system` without login until Milestone 5. | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 
 ## OPEN
 
@@ -54,7 +57,7 @@ To change a status, update the ADR and this table in the same commit. Only the p
 |---|---|---|
 | D-OPEN-01 | LLM provider(s) and models | Keep behind an `LlmProvider` port. Make a *provisional* choice before Milestone 4, because mapping suggestions need an LLM. Confirm it from evaluation results (Milestone 6) and data-processing terms. |
 | D-OPEN-02 | Embedding model and dimension | Decide alongside D-OPEN-01. Store the model ID with every vector. |
-| D-OPEN-03 | Identity provider | A managed OIDC provider for SaaS. Customer OIDC/SAML for Model B. The app always owns memberships and roles. |
+| D-OPEN-03b | Which identity provider vendor (the approach is Proposed as P-18) | Pick a managed OIDC vendor that supports MFA, with India-region data handling. Any compliant provider works with the api as built. Decide before the first pilot tenant. |
 | D-OPEN-04 | Cloud provider and region | An India region for data residency. Decide before Milestone 10. |
 | D-OPEN-05 | Policy engine | In-code typed policies for the MVP. Re-evaluate Cedar or OPA when policies become tenant-authored. |
 | D-OPEN-06 | Final vector store | Redis Stack (proposed) vs pgvector. Check licensing for Model B distribution. |
@@ -66,7 +69,6 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | D-OPEN-12 | Default retention for conversations, query logs and audit | Configurable per tenant. Defaults to be set with legal review. |
 | D-OPEN-13 | Custom entities beyond templates | Templates plus JSONB for the MVP. Revisit dynamic tables after pilots. |
 | D-OPEN-14 | What result data the LLM may see (aggregates only vs bounded rows) and provider data-retention terms | Aggregates and bounded top-N rows. PII columns masked unless policy allows. |
-| D-OPEN-15 | Service-to-service authentication (api ↔ ai-engine) and the RequestContext signing scheme | A shared-secret service token plus HMAC-signed RequestContext for the MVP. mTLS or asymmetric signing for Model B. Decide in Milestone 2. |
 | D-OPEN-17 | Backup and recovery targets (RPO/RTO), and backup retention window | Set before Milestone 10. The retention window must be disclosed to customers (see data-handling). |
 | D-OPEN-18 | Usage metering and quota model (questions, tokens, sync volume per tenant) | Meter from Milestone 6 (in `ai_execution`). Quota limits follow D-OPEN-11. |
 | D-OPEN-19 | Bounded adaptive investigation: may the orchestrator choose further steps from a closed catalog within a hard budget, and who chooses ([ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md)) | Option A: deterministic rules choose drill steps; LLM selection only if evaluation shows gains. Refines D-07, does not replace it. Decide before Milestone 6. |

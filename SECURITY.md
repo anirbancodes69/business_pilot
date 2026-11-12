@@ -1,6 +1,6 @@
 # SECURITY.md — Security model
 
-These are mandatory engineering requirements, not guidance. Nothing here is implemented yet (see [CURRENT.md](CURRENT.md)). BusinessPilot makes no compliance or certification claims.
+These are mandatory engineering requirements, not guidance. The database isolation, authentication, RBAC and audit parts are implemented as of Milestone 2 (see [CURRENT.md](CURRENT.md) for exactly what runs and what does not). Everything else here is still design. BusinessPilot makes no compliance or certification claims.
 
 Details: [docs/security/threat-model.md](docs/security/threat-model.md), [docs/security/tenant-isolation-tests.md](docs/security/tenant-isolation-tests.md), [docs/security/data-handling.md](docs/security/data-handling.md). Tenant entity model: [docs/architecture/tenant-model.md](docs/architecture/tenant-model.md).
 
@@ -50,6 +50,7 @@ Rules:
 - The application connects as a role that **does not own** the tables and has neither `BYPASSRLS` nor superuser rights. Migrations run as a separate owner role.
 - Tenant context is set with `SET LOCAL app.tenant_id = $1` inside each transaction. This prevents leakage across pooled connections. With no context set, queries return zero rows (`current_setting(..., true)` returns NULL).
 - Plan execution adds `SET LOCAL TRANSACTION READ ONLY` and a `statement_timeout`.
+- In code, the tenant context is set with `set_config('app.tenant_id', $1, true)`, which is `SET LOCAL` in parameterizable form (ADR-0014). Two global tables, `core.app_user` and `core.permission`, hold no tenant data and have no RLS. A test keeps that list fixed.
 - Cross-tenant platform operations (billing, support) use a separate audited role and code path, never the request path.
 - **Defined exceptions (P-15). These are the only ones:**
   1. *Membership lookup at login.* Before a tenant is selected, `tenant_membership` has an additional policy `USING (user_id = current_setting('app.user_id', true)::uuid)`. It lets a user list only their own memberships. No other table has this policy.
