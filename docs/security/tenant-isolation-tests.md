@@ -1,6 +1,6 @@
 # Mandatory tenant isolation tests
 
-These tests are **mandatory engineering requirements** ([SECURITY.md §10](../../SECURITY.md#10-mandatory-tenant-isolation-tests)). TI-01 to TI-05 and TI-15 are implemented in `apps/api/test/isolation/` and run in CI as the `tenant-isolation` job (`pnpm test:isolation`, needs a real PostgreSQL). TI-10 is covered at unit level (signature, expiry, request_id binding) in `apps/api/test/request-context.test.ts`. The rest are added in the milestones below. Each must be automated, run in CI, and block merges when failing.
+These tests are **mandatory engineering requirements** ([SECURITY.md §10](../../SECURITY.md#10-mandatory-tenant-isolation-tests)). TI-01 to TI-05 and TI-15 are implemented (and extended for `core.semantic_model` in M3: cross-tenant read, edit and publish give 404, a forged tenant gives 403, published documents are immutable in the database) in `apps/api/test/isolation/` and run in CI as the `tenant-isolation` job (`pnpm test:isolation`, needs a real PostgreSQL). TI-10 is covered at unit level (signature, expiry, request_id binding) in `apps/api/test/request-context.test.ts`. The rest are added in the milestones below. Each must be automated, run in CI, and block merges when failing.
 
 Fixture: tenants **A** and **B** with deliberately overlapping natural keys (same customer codes, invoice numbers and branch names) and different values, so a leak is visible in results. Within tenant A: users with roles owner, finance_manager, sales_manager (branch 1 only) and sales_executive.
 

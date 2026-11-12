@@ -80,6 +80,18 @@ export interface AuditEventTable {
   occurred_at: Generated<Date>;
 }
 
+export interface SemanticModelTable {
+  id: Generated<string>;
+  tenant_id: string;
+  version: number;
+  status: Generated<'draft' | 'published' | 'retired'>;
+  document: Json;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  published_by: string | null;
+  published_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+}
+
 export interface Database {
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
@@ -90,4 +102,5 @@ export interface Database {
   'core.membership_role': MembershipRoleTable;
   'core.access_policy': AccessPolicyTable;
   'core.audit_event': AuditEventTable;
+  'core.semantic_model': SemanticModelTable;
 }
