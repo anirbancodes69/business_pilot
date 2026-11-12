@@ -1,6 +1,6 @@
 # AI orchestration pipeline — detailed design
 
-Summary: [AI_ENGINEERING.md](../../AI_ENGINEERING.md). Decision: [ADR-0006](../adr/ADR-0006-ai-orchestration.md). Not implemented.
+Summary: [AI_ENGINEERING.md](../../AI_ENGINEERING.md). Orchestrator, investigation, conversation state and provenance: [analyst-orchestrator.md](analyst-orchestrator.md). Decision: [ADR-0006](../adr/ADR-0006-ai-orchestration.md). Not implemented.
 
 ## Stage contracts
 
@@ -46,6 +46,8 @@ Sort arrays of IDs, canonicalize filter value order, use the *resolved* absolute
 2. Execute the totals and each breakdown (one tool call each, within `max_tool_calls`).
 3. In code: compute the total delta and each member's contribution to the delta, then rank by absolute contribution.
 4. The LLM explains the top contributors and labels causes as *possible explanations*. Causes that are not in the data (for example "seasonality") must appear under `possible_explanations`, never under `verified_facts`.
+
+This is the accepted baseline. Drilling adaptively into a discovered contributor (step catalog, budget, stop rules) is proposed in [analyst-orchestrator.md §3.3](analyst-orchestrator.md#33-multi-step-investigation-adr-0010) and is OPEN ([ADR-0010](../adr/ADR-0010-bounded-adaptive-investigation.md)).
 
 ## Grounding check
 

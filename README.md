@@ -1,10 +1,10 @@
 # BusinessPilot
 
-BusinessPilot is a configuration-driven, multi-tenant, AI-powered business intelligence platform. Business owners, finance managers and operations managers ask questions about their own business data in plain language, for example "Why did revenue decrease this month?". BusinessPilot answers by running authorized, structured queries and explaining the results.
+BusinessPilot is an **AI Business Analyst**: a configuration-driven, multi-tenant business intelligence platform. It understands business questions, investigates structured business data, identifies contributing factors, and gives explanations and recommendations grounded in evidence. Business owners, finance managers and operations managers ask questions about their own business data in plain language, for example "Why did revenue decrease this month?". BusinessPilot answers by running authorized, structured queries and explaining the results.
 
-It is **not** a chatbot over uploaded documents. Every number in an answer must come from a structured query result or a deterministic calculation on one.
+It is **not** a chatbot over uploaded documents, and not merely natural-language-to-SQL. Every number in an answer must come from a structured query result or a deterministic calculation on one.
 
-> **Status: Architecture and documentation initialization.** Application development has not started, and no application code exists. See [CURRENT.md](CURRENT.md) for what has actually been built.
+> **Status: Milestone 1 (repository foundation) is complete.** Only skeletons, health endpoints and infrastructure exist. No product feature is implemented. See [CURRENT.md](CURRENT.md) for what has actually been built.
 
 ## Who it is for
 

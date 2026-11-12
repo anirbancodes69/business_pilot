@@ -1,11 +1,13 @@
 # AI_ENGINEERING.md — AI orchestration, semantic layer and caching
 
-Nothing here is implemented yet. Details: [docs/ai/orchestration-pipeline.md](docs/ai/orchestration-pipeline.md), [docs/ai/caching.md](docs/ai/caching.md), [docs/ai/evaluation.md](docs/ai/evaluation.md). Contracts: [contracts/ai/](contracts/ai/), [contracts/semantic-model/](contracts/semantic-model/).
+Nothing here is implemented yet. Details: [docs/ai/analyst-orchestrator.md](docs/ai/analyst-orchestrator.md) (the AI Analyst Orchestrator, the five capabilities, conversation state, provenance), [docs/ai/semantic-business-model.md](docs/ai/semantic-business-model.md), [docs/ai/orchestration-pipeline.md](docs/ai/orchestration-pipeline.md), [docs/ai/caching.md](docs/ai/caching.md), [docs/ai/evaluation.md](docs/ai/evaluation.md). Contracts: [contracts/ai/](contracts/ai/), [contracts/semantic-model/](contracts/semantic-model/).
 
 ## 1. Design stance
 
+BusinessPilot's AI is an **AI Business Analyst** ([PRODUCT.md](PRODUCT.md#positioning)). It understands business intent, plans an analysis, investigates over several bounded steps, diagnoses contributing factors with evidence, and recommends next steps that cite that evidence. It is not a document RAG chatbot and not a plain natural-language-to-SQL translator. The component that does this is the **AI Analyst Orchestrator** ([§2a](#2a-ai-analyst-orchestrator)).
+
 - **Deterministic orchestration** (D-07). The pipeline is a fixed sequence of stages written in code. The LLM is used only inside specific stages, and its output there is constrained by a schema and validated.
-- **No uncontrolled agent loops.** There is no agent-to-agent delegation and no free-form tool selection. Diagnostic questions use bounded plans that declare their breakdowns up front.
+- **No uncontrolled agent loops.** There is no agent-to-agent delegation and no free-form tool selection. Diagnostic questions use bounded plans that declare their breakdowns up front. Whether the orchestrator may drill adaptively, using a closed step catalog, a hard budget and deterministic stop rules, is OPEN ([ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md), D-OPEN-19). Until it is decided, the up-front rule applies.
 - **The LLM proposes. Trusted code decides.** Permissions, tenant scope, SQL generation and arithmetic all happen outside the model (D-04, P-02, P-03).
 - **ai-engine owns all model access** (LLM and embeddings, P-16). The api and worker store and search vectors but never call model providers.
 - **Use specialized models only when they earn it.** Start with one capable model for every LLM stage, and introduce a smaller model per stage only when evaluation shows it holds quality and lowers cost or latency.
@@ -26,7 +28,15 @@ Nothing here is implemented yet. Details: [docs/ai/orchestration-pipeline.md](do
 | 10 | Grounding check: every number in the narrative matches a result or derived value within rounding | No | Pass, one regeneration, or degrade to a facts-only answer |
 | 11 | Persist and respond, with an AI execution record | No | `AnswerResponse` ([contracts/ai/answer-response.schema.json](contracts/ai/answer-response.schema.json)) |
 
+In the orchestrator design, stages 5–8 form the **investigation** phase. For diagnostic intents they can repeat within the budget ([§2a](#2a-ai-analyst-orchestrator)).
+
 `knowledge` intents (for example "what is our credit policy?") skip stages 5–8 and answer from retrieved approved documents with citations. `recommendation` intents ("what should management investigate this week?") run a predefined, tenant-configurable set of checks, such as metrics that moved beyond a threshold, overdue receivables and margin decline, through the same plan and execute path.
+
+## 2a. AI Analyst Orchestrator
+
+A deterministic state machine in ai-engine: **understand → plan → investigate (bounded loop) → diagnose → recommend → explain and ground**. Every data access is a `QueryPlan` that the api re-authorizes, compiles and executes. The orchestrator only reasons over findings computed in code from authorized results. The LLM is used for intent understanding, plan drafting, narrative and recommendation wording, always schema-constrained and validated. Full design, including the step catalog, budget, stop rules and the split of responsibilities with the api: [docs/ai/analyst-orchestrator.md](docs/ai/analyst-orchestrator.md).
+
+OPEN decisions that shape it: adaptive step selection ([ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md)), structured conversation state ([ADR-0011](docs/adr/ADR-0011-analytical-conversation-state.md)), the evidence model ([ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)), semantic model v1 ([ADR-0013](docs/adr/ADR-0013-semantic-model-v1.md)) and recommendation generation (D-OPEN-23).
 
 ## 3. Semantic layer
 
@@ -39,9 +49,15 @@ The semantic model is the tenant's versioned business vocabulary ([contracts/sem
 
 The planner never sees physical table names. It references semantic IDs only. The API's plan compiler is the only component that knows the physical mapping.
 
+The analyst capabilities need more semantics than schema v0 holds: additivity, polarity, dimension hierarchies, metric drivers, written business definitions and business rules. Target model and gaps: [docs/ai/semantic-business-model.md](docs/ai/semantic-business-model.md), decision [ADR-0013](docs/adr/ADR-0013-semantic-model-v1.md) (OPEN).
+
 ## 4. Answer structure
 
 Every answer has typed sections: `verified_facts`, `derived_calculations` (each with its formula and inputs), `possible_explanations` (labelled hypotheses), `recommendations`, `unknowns`, `sources` (data source, entity, sync time) and `freshness`. The UI renders them distinctly. A section with no content is omitted, never padded.
+
+**Provenance rule (strict).** Every number shown has exactly one origin: an api result cell (`result`), a code-registry calculation with its input evidence (`derived`), or a tenant configuration value (`config`). Hypotheses state whether the data supports or contradicts them, or whether they cannot be tested with the connected data. Every recommendation cites at least one finding. An answer that violates any of this is regenerated once and then reduced to verified facts. The evidence ledger design is OPEN ([ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)).
+
+**Conversation state.** The current contract carries a free-text `conversation_summary`. The target is a typed `AnalyticalContext` (focus metrics, dimensions, filters, relative time range, open hypotheses, evidence references; no figures or rows). The api re-validates it against the user's authorized view on every turn, and follow-ups are applied as typed deltas ([ADR-0011](docs/adr/ADR-0011-analytical-conversation-state.md), OPEN).
 
 ## 5. Caching
 
@@ -61,8 +77,8 @@ Excluded from caching: live/federated results (unless a short TTL is configured)
 
 ## 7. Evaluation
 
-A golden question set per industry template, run against a synthetic tenant dataset. Metrics: intent accuracy, plan exact-match and execution accuracy (results equal the expected results), numerical correctness, grounding pass rate, correct refusal of unauthorized requests, latency and cost. The suite runs in CI for prompt, model and planner changes. Details: [docs/ai/evaluation.md](docs/ai/evaluation.md).
+A golden question set per industry template, run against a synthetic tenant dataset. Metrics: intent accuracy, query correctness (plan exact-match and execution accuracy), investigation success (finding the planted contributing factors within budget), factual grounding and provenance coverage, follow-up resolution, recommendation evidence citation, tenant isolation and authorization (hard gate), latency and cost. The suite runs in CI for prompt, model and planner changes. Details: [docs/ai/evaluation.md](docs/ai/evaluation.md).
 
 ## Observability
 
-Each AI execution record and trace carries: `request_id`, `tenant_id`, intent, prompt versions, model IDs, tokens in and out (with cached tokens where the provider reports them), cost estimate, per-stage latency, cache results (prompt, exact, semantic), plan validation result, tool call count, grounding result and user feedback. Question and answer text are stored only under the tenant's retention policy and never in logs or traces.
+Each AI execution record and trace carries: `request_id`, `tenant_id`, intent, prompt versions, model IDs, tokens in and out (with cached tokens where the provider reports them), cost estimate, per-stage latency, cache results (prompt, exact, semantic), plan validation result, tool call count, investigation trace (steps, reason for each step, stop reason, coverage), grounding result and user feedback. Question and answer text are stored only under the tenant's retention policy and never in logs or traces.

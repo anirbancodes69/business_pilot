@@ -4,7 +4,7 @@ Ordering principle: reach a **working vertical slice** fast. The slice is one pi
 
 Where a later milestone's items are needed by the slice, a thin version is pulled forward, and each milestone says what it defers.
 
-Status of every milestone: Milestone 1 **In progress** (implemented on branch `feature/repo-foundation`, pending review); all others **Not started** (see [CURRENT.md](CURRENT.md)).
+Status of every milestone: Milestone 1 **Completed** (merged 2026-11-11, PR #1); all others **Not started** (see [CURRENT.md](CURRENT.md)).
 
 ---
 
@@ -44,6 +44,7 @@ Status of every milestone: Milestone 1 **In progress** (implemented on branch `f
 - E3.1 Configuration service that validates documents against [schemas/](schemas/), with versioning and an approval workflow.
 - E3.2 The `wholesale_distribution v0` template: canonical tables in `analytics` with RLS, and a default semantic model (measures such as revenue, outstanding receivables, gross margin).
 - E3.3 Semantic model publishing (immutable versions) and the authorized view builder.
+- E3.0 Decide D-OPEN-22 (semantic model v1, [ADR-0013](docs/adr/ADR-0013-semantic-model-v1.md)) before the template is published. If it is accepted, extend the schema and validators.
 - E3.4 ABAC row filters (branch assignment) and column masks.
 
 **Depends on:** M2.
@@ -80,19 +81,21 @@ Status of every milestone: Milestone 1 **In progress** (implemented on branch `f
 
 **Epics**
 
+- E6.0 Decide D-OPEN-19, -20, -21 and -23 (investigation, conversation state, provenance, recommendations; [ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md) to [ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)) before E6.2. The scope of E6.2, E6.4 and E6.9 follows those decisions.
 - E6.1 Confirm D-OPEN-01 (LLM provider) using a small evaluation spike.
 - E6.2 ai-engine pipeline stages 1–11 ([AI_ENGINEERING.md](AI_ENGINEERING.md#2-pipeline)), including the deterministic time resolver (P-17). Context retrieval is lexical only (no vectors until M7), and there is no semantic cache yet.
 - E6.3 API internal tools: `execute-plan` (plan validation, ABAC injection, SQL compiler, read-only execution, audit) with signed RequestContext.
 - E6.4 Derived calculations and grounding check.
 - E6.5 Chat UI showing answer sections, sources and freshness.
-- E6.6 Golden question set v0 (30–50 questions) on a synthetic distributor dataset, run in CI.
+- E6.6 Golden question set v0 (30–50 questions) on a synthetic distributor dataset, run in CI. It includes planted investigation scenarios and multi-turn follow-up cases ([docs/ai/evaluation.md](docs/ai/evaluation.md)).
 - E6.7 Exact result cache, basic version (the full key, data-version invalidation, TTL), because the MVP scope in [PRODUCT.md](PRODUCT.md) includes it. Test TI-07 (exact cache part).
 - E6.8 Usage metering in `ai_execution` (D-OPEN-18).
+- E6.9 AI Analyst Orchestrator at MVP depth ([docs/ai/analyst-orchestrator.md](docs/ai/analyst-orchestrator.md)): bounded investigation, evidence ledger, contextual follow-ups and playbook recommendations for the wholesale template, as decided in E6.0.
 
 **Depends on:** M5 (managed-sync data).
-**Acceptance:** the six example questions in [PRODUCT.md](PRODUCT.md) are answered correctly against the synthetic dataset. A sales manager cannot obtain data for unassigned branches by any phrasing in the adversarial test set. Every number in an answer passes the grounding check.
+**Acceptance:** the six example questions in [PRODUCT.md](PRODUCT.md) are answered correctly against the synthetic dataset. A sales manager cannot obtain data for unassigned branches by any phrasing in the adversarial test set. Every number in an answer passes the grounding check. "Why" questions find the planted contributors in the order of contribution, within the step budget, on the investigation cases. Follow-ups resolve correctly and never widen access.
 
-## Milestone 7 — RAG and vector retrieval
+## Milestone 7 — Retrieval for semantic understanding (RAG and vector retrieval)
 
 **Epics**
 
