@@ -102,7 +102,7 @@ web ─▶ api: POST /v1/conversations/{id}/questions
  8. api   Persist the conversation turn and AI execution record. Return to web.
 ```
 
-Bounded diagnostic questions ("why did revenue fall?") repeat steps 5–6 for a fixed, plan-declared set of breakdowns (for example by branch, category and customer), capped at `max_tool_calls`. There are no open-ended loops. Contracts: [contracts/ai/](contracts/ai/). Details: [docs/architecture/request-lifecycle.md](docs/architecture/request-lifecycle.md).
+Bounded diagnostic questions ("why did revenue fall?") repeat steps 5–6 for a fixed, plan-declared set of breakdowns (for example by branch, category and customer), capped at `max_tool_calls`. There are no open-ended loops. A proposed refinement lets the AI Analyst Orchestrator drill into a discovered contributor, choosing from a closed step catalog within the same budget, with every step re-authorized in step 6. It is OPEN ([ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md)). Contracts: [contracts/ai/](contracts/ai/). Details: [docs/architecture/request-lifecycle.md](docs/architecture/request-lifecycle.md).
 
 ## 4. Data architecture (summary)
 
@@ -119,7 +119,7 @@ Isolation layers (with exactly two defined RLS exceptions, P-15): (1) authentica
 
 ## 6. AI architecture (summary)
 
-A fixed pipeline: intent → plan → validate → execute through the API → calculate → explain → ground-check. It uses a versioned semantic layer. There are three caches (provider prompt cache, exact result cache, semantic plan cache). Details: [AI_ENGINEERING.md](AI_ENGINEERING.md).
+An **AI Analyst Orchestrator**: a deterministic state machine that runs intent → plan → validate → execute through the API → calculate → explain → ground-check, with a bounded investigation phase for diagnostic questions. It uses a versioned semantic business model, and every number carries provenance. Design: [docs/ai/analyst-orchestrator.md](docs/ai/analyst-orchestrator.md). There are three caches (provider prompt cache, exact result cache, semantic plan cache). Details: [AI_ENGINEERING.md](AI_ENGINEERING.md).
 
 ## 7. Deployment models
 

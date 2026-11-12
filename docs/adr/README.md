@@ -13,5 +13,9 @@ Each ADR records one significant decision. The status register is [DECISIONS.md]
 | [0007](ADR-0007-caching-strategy.md) | Caching strategy | Accepted (cache identity); Proposed (mechanisms) |
 | [0008](ADR-0008-technology-selection.md) | Technology selection | Accepted (modular monolith, stack, tooling); Proposed (Redis settings) |
 | [0009](ADR-0009-database-access-library.md) | Database access library | Accepted (Kysely) |
+| [0010](ADR-0010-bounded-adaptive-investigation.md) | Bounded adaptive investigation | OPEN |
+| [0011](ADR-0011-analytical-conversation-state.md) | Structured analytical conversation state | OPEN |
+| [0012](ADR-0012-numerical-provenance-and-evidence.md) | Numerical provenance and evidence model | OPEN |
+| [0013](ADR-0013-semantic-model-v1.md) | Semantic model v1 extensions | OPEN |
 
 When one ADR holds decisions with different statuses, its **Decision items** table gives the status of each item, using the IDs in DECISIONS.md.
