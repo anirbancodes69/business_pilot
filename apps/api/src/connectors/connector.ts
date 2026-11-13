@@ -51,6 +51,8 @@ export interface ConnectorCallContext {
   credentials: unknown;
   /** Absolute time (epoch ms) after which the call must stop. */
   deadline: number;
+  /** Uploaded-file sources only: the bytes of the latest upload, read through the object storage port. */
+  readUpload?: () => Promise<Buffer | undefined>;
 }
 
 export interface ConnectionTestResult {
@@ -71,8 +73,10 @@ export interface DiscoveredObject {
   name: string;
   kind: 'table' | 'sheet' | 'collection';
   fields: DiscoveredField[];
-  /** Planner estimate, not a count. */
+  /** A planner estimate for databases, the exact count for files. */
   estimated_rows: number | null;
+  /** Files only: columns that are present and unique in every row, usable as a key. */
+  key_candidates?: string[];
 }
 
 export interface DiscoveredSchema {

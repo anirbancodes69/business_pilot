@@ -114,6 +114,30 @@ export interface DataSourceTable {
   created_at: Generated<Date>;
 }
 
+export interface DataSourceUploadTable {
+  id: Generated<string>;
+  tenant_id: string;
+  data_source_id: string;
+  object_key: string;
+  file_name: string;
+  size_bytes: ColumnType<string, number, never>;
+  sha256: string;
+  created_by: string | null;
+  created_at: Generated<Date>;
+}
+
+export interface DataSourceObjectTable {
+  id: Generated<string>;
+  tenant_id: string;
+  data_source_id: string;
+  name: string;
+  key_columns: ColumnType<string[], string | undefined, string>;
+  approved: Generated<boolean>;
+  approved_by: string | null;
+  approved_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
 export interface Database {
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
@@ -127,4 +151,6 @@ export interface Database {
   'core.semantic_model': SemanticModelTable;
   'core.connector_credential': ConnectorCredentialTable;
   'core.data_source': DataSourceTable;
+  'core.data_source_upload': DataSourceUploadTable;
+  'core.data_source_object': DataSourceObjectTable;
 }

@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   Body,
@@ -8,10 +9,13 @@ import {
   Inject,
   NotFoundException,
   Param,
+  PayloadTooLargeException,
   Post,
+  Put,
   Req,
   ServiceUnavailableException,
   UnprocessableEntityException,
+  UnsupportedMediaTypeException,
   UseGuards,
 } from '@nestjs/common';
 import { z } from 'zod';
@@ -23,15 +27,39 @@ import { ENVELOPE_TOKEN } from '../platform/crypto/crypto.module';
 import type { EnvelopeCrypto } from '../platform/crypto/envelope';
 import { DatabaseService, type Tx } from '../platform/database/database.module';
 import {
+  OBJECT_STORAGE_TOKEN,
+  type ObjectStorage,
+} from '../platform/object-storage/object-storage';
+import {
   type Connector,
   type ConnectorCallContext,
   ConnectorConfigError,
   ConnectorError,
+  SchemaError,
+  type DiscoveredSchema,
 } from './connector';
+import { assertSafeXlsx, MAX_UPLOAD_BYTES } from './excel/zip-guard';
 import { ConnectorRegistry } from './connector-registry';
 
 const CALL_BUDGET_MS = 30_000;
 const CREDENTIAL_PURPOSE = 'connector_credential';
+
+const keysBody = z.strictObject({ key_columns: z.array(z.string().min(1).max(255)).min(1).max(5) });
+
+/** A display name only. The stored object key never contains it. */
+function safeFileName(raw: unknown): string {
+  const base = (typeof raw === 'string' ? raw : '').split(/[\\/]/).pop() ?? '';
+  const cleaned = base
+    .replace(/[^A-Za-z0-9 ._()-]/g, '_')
+    .trim()
+    .slice(0, 255);
+  return cleaned === '' ? 'upload.xlsx' : cleaned;
+}
+
+function objectName(value: string): string {
+  if (value.length < 1 || value.length > 255) throw new NotFoundException();
+  return value;
+}
 
 const createBody = z.strictObject({
   name: z.string().trim().min(1).max(120),
@@ -80,6 +108,7 @@ export class DataSourceController {
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(ConnectorRegistry) private readonly registry: ConnectorRegistry,
     @Inject(ENVELOPE_TOKEN) private readonly crypto: EnvelopeCrypto | null,
+    @Inject(OBJECT_STORAGE_TOKEN) private readonly storage: ObjectStorage,
   ) {}
 
   @Get('connectors')
@@ -206,6 +235,24 @@ export class DataSourceController {
     return result;
   }
 
+  /** Runs discovery for a stored data source. Metadata only, no row values. */
+  private async discoverFor(
+    tenantId: string,
+    id: string,
+  ): Promise<{ schema: DiscoveredSchema; dataSourceId: string }> {
+    const { connector, ctx, dataSourceId } = await this.prepare(tenantId, id);
+    try {
+      return { schema: await connector.discoverSchema(ctx), dataSourceId };
+    } catch (error) {
+      if (error instanceof ConnectorConfigError)
+        throw new UnprocessableEntityException('the stored configuration is invalid');
+      if (error instanceof SchemaError) throw new UnprocessableEntityException(error.message);
+      if (error instanceof ConnectorError)
+        throw new ServiceUnavailableException(`schema discovery failed: ${error.message}`);
+      throw error;
+    }
+  }
+
   /**
    * Discovers tables or sheets with columns, types and keys. Metadata only, no row values.
    * Runs in the api for now because the worker has no job queue until Milestone 5.
@@ -215,17 +262,7 @@ export class DataSourceController {
   @RequirePermission('data_source:manage')
   async discover(@Req() req: AuthedRequest, @Param('id') id: string) {
     const { tenantId, userId } = req.auth as NonNullable<AuthedRequest['auth']>;
-    const { connector, ctx, dataSourceId } = await this.prepare(tenantId, uuidParam(id));
-    let schema;
-    try {
-      schema = await connector.discoverSchema(ctx);
-    } catch (error) {
-      if (error instanceof ConnectorConfigError)
-        throw new UnprocessableEntityException('the stored configuration is invalid');
-      if (error instanceof ConnectorError)
-        throw new ServiceUnavailableException(`schema discovery failed: ${error.message}`);
-      throw error;
-    }
+    const { schema, dataSourceId } = await this.discoverFor(tenantId, uuidParam(id));
     await this.db.tenantTx(tenantId, (tx) =>
       this.audit.record(tx, {
         tenantId,
@@ -236,6 +273,197 @@ export class DataSourceController {
       }),
     );
     return schema;
+  }
+
+  /**
+   * Receives an .xlsx file as the raw request body (E4.2). The file is checked before it is stored:
+   * size, archive structure and expansion limits. Each upload is a new version.
+   */
+  @Post('data-sources/:id/upload')
+  @RequirePermission('data_source:manage')
+  async upload(@Req() req: AuthedRequest, @Param('id') id: string) {
+    const { tenantId, userId } = req.auth as NonNullable<AuthedRequest['auth']>;
+    const dataSourceId = uuidParam(id);
+    const source = await this.db.tenantTx(tenantId, (tx) =>
+      tx
+        .selectFrom('core.data_source')
+        .select(['id', 'connection'])
+        .where('id', '=', dataSourceId)
+        .executeTakeFirst(),
+    );
+    if (!source) throw new NotFoundException();
+    if ((source.connection as { upload_mode?: string }).upload_mode !== 'manual')
+      throw new ConflictException('this data source does not accept uploads');
+
+    const type = String(req.headers['content-type'] ?? '')
+      .split(';')[0]
+      ?.trim();
+    if (
+      type !== 'application/octet-stream' &&
+      type !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+      throw new UnsupportedMediaTypeException();
+    const declared = Number(req.headers['content-length'] ?? 0);
+    if (declared > MAX_UPLOAD_BYTES) throw new PayloadTooLargeException();
+    const chunks: Buffer[] = [];
+    let size = 0;
+    for await (const chunk of req) {
+      size += (chunk as Buffer).length;
+      if (size > MAX_UPLOAD_BYTES) throw new PayloadTooLargeException();
+      chunks.push(chunk as Buffer);
+    }
+    const file = Buffer.concat(chunks);
+    if (file.length === 0) throw new BadRequestException('the file is empty');
+    try {
+      assertSafeXlsx(file);
+    } catch (error) {
+      if (error instanceof SchemaError) throw new UnprocessableEntityException(error.message);
+      throw error;
+    }
+
+    const uploadId = randomUUID();
+    const key = `uploads/${dataSourceId}/${uploadId}.xlsx`;
+    const sha256 = createHash('sha256').update(file).digest('hex');
+    await this.storage.put(tenantId, key, file);
+    return this.db.tenantTx(tenantId, async (tx) => {
+      await tx
+        .insertInto('core.data_source_upload')
+        .values({
+          id: uploadId,
+          tenant_id: tenantId,
+          data_source_id: dataSourceId,
+          object_key: key,
+          file_name: safeFileName(req.headers['x-file-name']),
+          size_bytes: file.length,
+          sha256,
+          created_by: userId,
+        })
+        .execute();
+      await this.audit.record(tx, {
+        tenantId,
+        actorId: userId,
+        action: 'data_source.file_uploaded',
+        target: dataSourceId,
+        metadata: { upload_id: uploadId, size_bytes: file.length, sha256 },
+      });
+      return { upload_id: uploadId, size_bytes: file.length, sha256 };
+    });
+  }
+
+  @Get('data-sources/:id/objects')
+  @RequirePermission('data_source:manage')
+  async objects(@Req() req: AuthedRequest, @Param('id') id: string) {
+    const { tenantId } = req.auth as NonNullable<AuthedRequest['auth']>;
+    return this.db.tenantTx(tenantId, (tx) =>
+      tx
+        .selectFrom('core.data_source_object')
+        .select(['name', 'key_columns', 'approved', 'approved_at'])
+        .where('data_source_id', '=', uuidParam(id))
+        .orderBy('name')
+        .execute(),
+    );
+  }
+
+  /**
+   * Chooses the key columns of one table or sheet. Checked against a fresh discovery. A changed key
+   * withdraws any earlier approval. Approval itself is a separate permission (D-10).
+   */
+  @Put('data-sources/:id/objects/:name')
+  @RequirePermission('data_source:manage')
+  async setKeys(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Param('name') name: string,
+    @Body() body: unknown,
+  ) {
+    const { tenantId, userId } = req.auth as NonNullable<AuthedRequest['auth']>;
+    const parsed = keysBody.safeParse(body);
+    if (!parsed.success) throw new BadRequestException('invalid key selection');
+    const columns = [...new Set(parsed.data.key_columns)];
+    const { schema, dataSourceId } = await this.discoverFor(tenantId, uuidParam(id));
+    this.assertKeys(schema, objectName(name), columns);
+    return this.db.tenantTx(tenantId, async (tx) => {
+      await tx
+        .insertInto('core.data_source_object')
+        .values({
+          tenant_id: tenantId,
+          data_source_id: dataSourceId,
+          name,
+          key_columns: JSON.stringify(columns),
+        })
+        .onConflict((oc) =>
+          oc.columns(['tenant_id', 'data_source_id', 'name']).doUpdateSet({
+            key_columns: JSON.stringify(columns),
+            approved: false,
+            approved_by: null,
+            approved_at: null,
+            updated_at: new Date(),
+          }),
+        )
+        .execute();
+      await this.audit.record(tx, {
+        tenantId,
+        actorId: userId,
+        action: 'data_source.keys_selected',
+        target: dataSourceId,
+        metadata: { object: name, key_columns: columns },
+      });
+      return { name, key_columns: columns, approved: false };
+    });
+  }
+
+  /** Human approval: nothing is read from an object until this has happened (D-10). */
+  @Post('data-sources/:id/objects/:name/approve')
+  @HttpCode(200)
+  @RequirePermission('mapping:approve')
+  async approve(@Req() req: AuthedRequest, @Param('id') id: string, @Param('name') name: string) {
+    const { tenantId, userId } = req.auth as NonNullable<AuthedRequest['auth']>;
+    const dataSourceId = uuidParam(id);
+    const row = await this.db.tenantTx(tenantId, (tx) =>
+      tx
+        .selectFrom('core.data_source_object')
+        .select('key_columns')
+        .where('data_source_id', '=', dataSourceId)
+        .where('name', '=', objectName(name))
+        .executeTakeFirst(),
+    );
+    if (!row || row.key_columns.length === 0)
+      throw new ConflictException('choose key columns first');
+    // The source may have changed since the keys were chosen.
+    const { schema } = await this.discoverFor(tenantId, dataSourceId);
+    this.assertKeys(schema, name, row.key_columns);
+    return this.db.tenantTx(tenantId, async (tx) => {
+      await tx
+        .updateTable('core.data_source_object')
+        .set({ approved: true, approved_by: userId, approved_at: new Date() })
+        .where('data_source_id', '=', dataSourceId)
+        .where('name', '=', name)
+        .execute();
+      await this.audit.record(tx, {
+        tenantId,
+        actorId: userId,
+        action: 'data_source.object_approved',
+        target: dataSourceId,
+        metadata: { object: name },
+      });
+      return { name, approved: true };
+    });
+  }
+
+  /** Key columns must exist. For files they must also be present and unique in every row. */
+  private assertKeys(schema: DiscoveredSchema, name: string, columns: string[]): void {
+    const object = schema.objects.find((o) => o.name === name);
+    if (!object) throw new NotFoundException();
+    const names = new Set(object.fields.map((f) => f.name));
+    if (columns.some((c) => !names.has(c)))
+      throw new BadRequestException('a key column does not exist');
+    if (object.key_candidates) {
+      const [only] = columns;
+      if (columns.length !== 1 || !only || !object.key_candidates.includes(only))
+        throw new UnprocessableEntityException(
+          'the key must be one column whose values are present and unique in every row',
+        );
+    }
   }
 
   private async storeCredentials(
@@ -264,6 +492,19 @@ export class DataSourceController {
       .returning('id')
       .executeTakeFirstOrThrow();
     return row.id;
+  }
+
+  private async latestUpload(tenantId: string, dataSourceId: string): Promise<Buffer | undefined> {
+    const row = await this.db.tenantTx(tenantId, (tx) =>
+      tx
+        .selectFrom('core.data_source_upload')
+        .select('object_key')
+        .where('data_source_id', '=', dataSourceId)
+        .orderBy('created_at', 'desc')
+        .limit(1)
+        .executeTakeFirst(),
+    );
+    return row ? this.storage.get(tenantId, row.object_key) : undefined;
   }
 
   /** Loads the data source and decrypts its credentials in memory for one call. */
@@ -322,6 +563,7 @@ export class DataSourceController {
         config: loaded.source.connection,
         credentials: loaded.credentials,
         deadline: Date.now() + CALL_BUDGET_MS,
+        readUpload: () => this.latestUpload(tenantId, loaded.source.id),
       },
     };
   }

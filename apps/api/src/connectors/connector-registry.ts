@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Env_TOKEN } from '../platform/config/config.module';
 import type { Env } from '../platform/config/env';
 import { type Connector, type ConnectorCapabilities, capabilitiesSchema } from './connector';
+import { ExcelConnector } from './excel/excel.connector';
 import { PostgresConnector } from './postgresql/postgresql.connector';
 
 /** Core code asks the registry by type and reads capabilities. It never branches on the type. */
@@ -13,6 +14,7 @@ export class ConnectorRegistry {
     this.register(
       new PostgresConnector({ allowPrivateNetworks: env.CONNECTOR_ALLOW_PRIVATE_NETWORKS }),
     );
+    this.register(new ExcelConnector());
   }
 
   register(connector: Connector): void {

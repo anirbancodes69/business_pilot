@@ -26,6 +26,7 @@
     "jose": "^6.2.17",
     "kysely": "^0.28.0",
     "pg": "^8.13.0",
+    "read-excel-file": "^9.3.17",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "zod": "^4.6.6"
