@@ -39,26 +39,24 @@ export class AuthorizationService {
 
     // Data grants come only from the active access policy evaluated against the published
     // semantic model. Without either, the user has no data grants (default deny).
-    const [policyRow, modelRow, membership] = await Promise.all([
-      tx
-        .selectFrom('core.access_policy')
-        .select(['version', 'document'])
-        .where('tenant_id', '=', tenantId)
-        .where('status', '=', 'active')
-        .executeTakeFirst(),
-      tx
-        .selectFrom('core.semantic_model')
-        .select('document')
-        .where('tenant_id', '=', tenantId)
-        .where('status', '=', 'published')
-        .executeTakeFirst(),
-      tx
-        .selectFrom('core.tenant_membership')
-        .select('attributes')
-        .where('id', '=', membershipId)
-        .where('tenant_id', '=', tenantId)
-        .executeTakeFirst(),
-    ]);
+    const policyRow = await tx
+      .selectFrom('core.access_policy')
+      .select(['version', 'document'])
+      .where('tenant_id', '=', tenantId)
+      .where('status', '=', 'active')
+      .executeTakeFirst();
+    const modelRow = await tx
+      .selectFrom('core.semantic_model')
+      .select('document')
+      .where('tenant_id', '=', tenantId)
+      .where('status', '=', 'published')
+      .executeTakeFirst();
+    const membership = await tx
+      .selectFrom('core.tenant_membership')
+      .select('attributes')
+      .where('id', '=', membershipId)
+      .where('tenant_id', '=', tenantId)
+      .executeTakeFirst();
     if (policyRow && modelRow) {
       const { policy } = validateAccessPolicy(policyRow.document);
       const { document: model } = validateSemanticModel(modelRow.document);

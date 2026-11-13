@@ -62,6 +62,7 @@
 
 ## In progress
 
+- Review and merge of `feature/m3-semantic-model` (Milestone 3). Review found and fixed: concurrent queries in one transaction in the authorization loader, and no guard against two active policies (migration 0005). Known and left: two simultaneous draft creations can fail with a 500 on the unique version constraint instead of a clean 409.
 - Milestone 3 (`feature/m3-semantic-model`): E3.1 done for the semantic model. E3.0 done (ADR-0013 accepted, schema and validator at 0.2.0). E3.2 and the first parts of E3.3 and E3.4 done. Not started: E3.4 data-level enforcement in the compiler (M6) and the tenant admin UI.
 
 ## Pending (next milestones)
