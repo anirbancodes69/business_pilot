@@ -92,6 +92,28 @@ export interface SemanticModelTable {
   published_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
 }
 
+export interface ConnectorCredentialTable {
+  id: Generated<string>;
+  tenant_id: string;
+  key_id: string;
+  ciphertext: Buffer;
+  created_at: Generated<Date>;
+}
+
+export interface DataSourceTable {
+  id: Generated<string>;
+  tenant_id: string;
+  name: string;
+  type: string;
+  access_mode: 'managed_sync' | 'live_federated';
+  connection: Json;
+  credential_id: string | null;
+  status: Generated<'draft' | 'connected' | 'error' | 'disabled'>;
+  last_tested_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  created_by: string | null;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
@@ -103,4 +125,6 @@ export interface Database {
   'core.access_policy': AccessPolicyTable;
   'core.audit_event': AuditEventTable;
   'core.semantic_model': SemanticModelTable;
+  'core.connector_credential': ConnectorCredentialTable;
+  'core.data_source': DataSourceTable;
 }

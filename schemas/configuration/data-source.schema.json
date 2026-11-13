@@ -26,7 +26,7 @@
             "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
             "database": { "type": "string" },
             "schema": { "type": "string" },
-            "tls_mode": { "enum": ["require", "verify-ca", "verify-full"], "default": "verify-full" }
+            "tls_mode": { "enum": ["disable", "require", "verify-ca", "verify-full"], "default": "verify-full", "description": "'disable' is accepted only when the deployment allows private networks (local development)." }
           }
         },
         {
