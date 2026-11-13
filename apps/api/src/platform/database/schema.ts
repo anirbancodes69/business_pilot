@@ -92,6 +92,72 @@ export interface SemanticModelTable {
   published_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
 }
 
+export interface ConnectorCredentialTable {
+  id: Generated<string>;
+  tenant_id: string;
+  key_id: string;
+  ciphertext: Buffer;
+  created_at: Generated<Date>;
+}
+
+export interface DataSourceTable {
+  id: Generated<string>;
+  tenant_id: string;
+  name: string;
+  type: string;
+  access_mode: 'managed_sync' | 'live_federated';
+  connection: Json;
+  credential_id: string | null;
+  status: Generated<'draft' | 'connected' | 'error' | 'disabled'>;
+  last_tested_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  created_by: string | null;
+  created_at: Generated<Date>;
+}
+
+export interface DataSourceUploadTable {
+  id: Generated<string>;
+  tenant_id: string;
+  data_source_id: string;
+  object_key: string;
+  file_name: string;
+  size_bytes: ColumnType<string, number, never>;
+  sha256: string;
+  created_by: string | null;
+  created_at: Generated<Date>;
+}
+
+export interface DataSourceObjectTable {
+  id: Generated<string>;
+  tenant_id: string;
+  data_source_id: string;
+  name: string;
+  key_columns: ColumnType<string[], string | undefined, string>;
+  approved: Generated<boolean>;
+  approved_by: string | null;
+  approved_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+export interface EntityMappingTable {
+  id: Generated<string>;
+  tenant_id: string;
+  data_source_id: string;
+  source_object: string;
+  canonical_entity: string;
+  status: Generated<
+    'suggested' | 'in_review' | 'approved' | 'active' | 'rejected' | 'needs_review' | 'superseded'
+  >;
+  document: Json;
+  confidence: ColumnType<string | null, number | null | undefined, number | null>;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  approved_by: string | null;
+  approved_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  activated_by: string | null;
+  activated_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+}
+
 export interface Database {
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
@@ -103,4 +169,9 @@ export interface Database {
   'core.access_policy': AccessPolicyTable;
   'core.audit_event': AuditEventTable;
   'core.semantic_model': SemanticModelTable;
+  'core.connector_credential': ConnectorCredentialTable;
+  'core.data_source': DataSourceTable;
+  'core.data_source_upload': DataSourceUploadTable;
+  'core.data_source_object': DataSourceObjectTable;
+  'core.entity_mapping': EntityMappingTable;
 }

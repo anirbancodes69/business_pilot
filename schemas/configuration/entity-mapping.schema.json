@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:businesspilot:schemas:configuration:entity-mapping",
-  "x-version": "0.1.0",
+  "x-version": "0.2.0",
   "title": "EntityMapping",
   "description": "Maps one approved source object to one canonical entity. Activation requires human approval (D-10).",
   "type": "object",
@@ -42,7 +42,8 @@
         "oneOf": [{ "required": ["source"] }, { "required": ["constant"] }]
       }
     },
-    "row_filter": { "type": "string", "description": "Declarative filter expression on source fields (grammar TBD in Milestone 4); never raw SQL." },
+    "row_filter": { "type": "string", "description": "Declarative filter expression on source fields; never raw SQL. The grammar is not decided, so the api rejects any document that sets it (as of Milestone 4)." },
+    "suggestion_method": { "enum": ["heuristic", "llm", "manual"], "description": "How the suggestion was made. 'heuristic' is name and type similarity only. Added in 0.2.0." },
     "status": { "enum": ["suggested", "in_review", "approved", "active", "rejected", "needs_review", "superseded"] },
     "approved_by": { "type": "string", "format": "uuid" },
     "approved_at": { "type": "string", "format": "date-time" }

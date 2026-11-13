@@ -28,6 +28,7 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | D-12 | Tooling (formerly P-10): pnpm workspaces for TypeScript (no Turborepo until build times need it). uv for Python. Confirmed 2026-11-11. | [0008](docs/adr/ADR-0008-technology-selection.md) |
 | D-13 | Database access (formerly D-OPEN-16): Kysely query builder and its migrator for `apps/api`. SQL stays explicit, no ORM. RLS policies and roles are written as raw SQL migrations. Confirmed 2026-11-11. | [0009](docs/adr/ADR-0009-database-access-library.md) |
 | D-14 | Semantic model v1 (formerly D-OPEN-22): option A. Additivity, polarity, valid dimensions, drivers, derived metrics (code-registry formulas), business definitions, hierarchies, diagnostic flags, member synonyms and business rules are added together before the wholesale template is published. Schema 0.2.0. Confirmed 2026-11-13. | [0013](docs/adr/ADR-0013-semantic-model-v1.md) |
+| D-15 | Interim: the LLM provider and object storage sit behind ports and use dummy adapters only (no model call, in-memory non-durable storage). The real provider and product are still OPEN (D-OPEN-01, D-OPEN-24). No pilot tenant while either is a dummy. Confirmed 2026-11-14. | [0015](docs/adr/ADR-0015-dummy-llm-and-object-storage-adapters.md) |
 
 ## Proposed
 
@@ -56,7 +57,7 @@ To change a status, update the ADR and this table in the same commit. Only the p
 
 | ID | Question | Current recommendation |
 |---|---|---|
-| D-OPEN-01 | LLM provider(s) and models | Keep behind an `LlmProvider` port. Make a *provisional* choice before Milestone 4, because mapping suggestions need an LLM. Confirm it from evaluation results (Milestone 6) and data-processing terms. |
+| D-OPEN-01 | LLM provider(s) and models | Keep behind an `LlmProvider` port. Make a *provisional* choice before Milestone 4, because mapping suggestions need an LLM. Confirm it from evaluation results (Milestone 6) and data-processing terms. **Interim (2026-11-14): dummy provider, see D-15.** |
 | D-OPEN-02 | Embedding model and dimension | Decide alongside D-OPEN-01. Store the model ID with every vector. |
 | D-OPEN-03b | Which identity provider vendor (the approach is Proposed as P-18) | Pick a managed OIDC vendor that supports MFA, with India-region data handling. Any compliant provider works with the api as built. Decide before the first pilot tenant. |
 | D-OPEN-04 | Cloud provider and region | An India region for data residency. Decide before Milestone 10. |
@@ -76,3 +77,4 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | D-OPEN-20 | Structured analytical conversation state replacing the free-text `conversation_summary` ([ADR-0011](docs/adr/ADR-0011-analytical-conversation-state.md)) | Option A: typed `AnalyticalContext`, re-authorized by the api every turn. Contract change. Decide before Milestone 6. |
 | D-OPEN-21 | Numerical provenance and evidence ledger; how narrative references numbers ([ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)) | Option A: evidence placeholders rendered by code, grounding check kept. Contract change. Decide before Milestone 6. |
 | D-OPEN-23 | How recommendations are generated: template playbooks, LLM wording over findings, or hybrid | Hybrid: deterministic playbook triggers per template, LLM wording, mandatory evidence citation. Needs an ADR before Milestone 6. |
+| D-OPEN-24 | Object storage product (S3-compatible) for uploads and files. The MinIO images used locally are no longer published | Choose a supported S3-compatible store (a managed one in Model A). Interim: dummy adapter, see D-15. Decide before Milestone 5 (the worker needs shared storage) and before any pilot. |

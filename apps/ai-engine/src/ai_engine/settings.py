@@ -6,3 +6,4 @@ class Settings(BaseSettings):
 
     otel_service_name: str = "bp-ai-engine"
     otel_traces_exporter: str = "otlp"  # otlp | console | none
+    llm_provider: str = "dummy"  # only "dummy" exists (ADR-0015)

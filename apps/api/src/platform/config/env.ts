@@ -19,6 +19,14 @@ const schema = z.object({
   // Service trust (D-OPEN-15). Comma-separated list allows rotation with an overlap window.
   INTERNAL_SERVICE_TOKEN: z.string().min(16).optional(),
   REQUEST_CONTEXT_SIGNING_KEY: z.string().min(32).optional(),
+  // Object storage adapter (ADR-0015). Only the in-memory stand-in exists until D-OPEN-24 is decided.
+  OBJECT_STORAGE_DRIVER: z.enum(['dummy']).default('dummy'),
+  // Connector egress guard (ADR-0004): private, loopback and link-local hosts are refused unless true.
+  // For local development and tests only.
+  CONNECTOR_ALLOW_PRIVATE_NETWORKS: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
   // Local key-encryption key for the KeyManagement port (base64, 32 bytes). Local development only.
   LOCAL_KEK_BASE64: z.string().min(1).optional(),
 });

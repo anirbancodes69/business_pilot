@@ -36,7 +36,10 @@ export async function createFixture(): Promise<Fixture> {
   const raw = createDb(e, 'app');
   const owner = createDb(e, 'owner');
   const identity = new IdentityService(db);
-  const crypto = new EnvelopeCrypto(new LocalKeyManagement(randomBytes(32).toString('base64')));
+  // Tenants are provisioned with the same KEK the app under test uses (LOCAL_KEK_BASE64), so the
+  // app can unwrap their data keys.
+  process.env.LOCAL_KEK_BASE64 ??= randomBytes(32).toString('base64');
+  const crypto = new EnvelopeCrypto(new LocalKeyManagement(process.env.LOCAL_KEK_BASE64));
   const tenancy = new TenancyService(db, new AuditService(), crypto);
   const run = randomUUID().slice(0, 8);
   const mk = async (tag: string, name: string) => {

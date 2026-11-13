@@ -5,7 +5,9 @@ Decision: [ADR-0004](../../docs/adr/ADR-0004-connector-architecture.md). Capabil
 Connectors are stateless NestJS providers. Every call receives a `ConnectorCallContext`: `tenant_id`, `data_source_id`, validated `config`, decrypted `credentials` (in memory only), `deadline` and `logger`. The logger is pre-scrubbed, so secrets are redacted.
 
 ```ts
-// Illustrative TypeScript signature — not implemented
+// Illustrative TypeScript signature. Milestone 4 implements capabilities, testConnection and
+// discoverSchema only (apps/api/src/connectors/). readSnapshot, readChanges and listKeys arrive
+// with the sync engine (Milestone 5). The call context has no logger yet: connectors do not log.
 interface Connector {
   readonly type: 'excel' | 'google_sheets' | 'postgresql' | 'mysql' | 'mongodb' | string;
   describeCapabilities(): ConnectorCapabilities;                 // connector-capabilities.schema.json

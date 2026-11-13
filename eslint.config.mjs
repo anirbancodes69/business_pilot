@@ -26,7 +26,11 @@ export default tseslint.config(
   {
     // Rule: only the platform module may use the raw Kysely instance or pg pool (ADR-0009).
     files: ['apps/api/src/**/*.ts'],
-    ignores: ['apps/api/src/platform/**', 'apps/api/src/migrations/**'],
+    ignores: [
+      'apps/api/src/platform/**',
+      'apps/api/src/migrations/**',
+      'apps/api/src/connectors/**',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -35,6 +39,24 @@ export default tseslint.config(
             {
               group: ['pg', 'kysely', 'ioredis', 'redis'],
               message: 'Raw database/Redis clients may only be imported inside src/platform.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Connectors open short-lived connections to customer databases with `pg`. They still must not
+    // touch the application database (Kysely) or Redis.
+    files: ['apps/api/src/connectors/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['kysely', 'ioredis', 'redis'],
+              message: 'Connectors must not use the application database or Redis clients.',
             },
           ],
         },
