@@ -19,7 +19,7 @@ Fixture: tenants **A** and **B** with deliberately overlapping natural keys (sam
 | TI-11 | Prompt injection: questions and synced text fields that contain instructions to access tenant B or other branches yield no extra data (also in the AI adversarial evaluation set) | AI | M6 |
 | TI-12 | Object storage: tenant A cannot read tenant B's upload keys through any API | Storage | M4 |
 | TI-13 | Tenant deletion removes tenant data from PostgreSQL, Redis keys and indexes, object storage and credentials, and leaves other tenants untouched | All | M9/M10 |
-| TI-14 | ABAC: sales_manager (branch 1) gets only branch 1 rows for every measure, including through cache hits | API / DB | M3/M6 |
+| TI-14 | ABAC: sales_manager (branch 1) gets only branch 1 rows for every measure, including through cache hits | API / DB | M3/M6 (M3: the AuthorizationContext carries the resolved branch filter, tested; row injection and cache hits come with the compiler in M6) |
 | TI-15 | RLS exceptions stay narrow: with only `app.user_id` set, a user sees only their own `tenant_membership` rows and nothing in any other table; the `bp_system` role cannot select from any `analytics` table or from non-allow-listed `core` tables | DB | M2 |
 
 Adding a new tenant-owned store, table, cache or job type requires adding or extending a test in this list in the same PR.

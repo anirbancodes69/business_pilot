@@ -1,3 +1,4 @@
+import type { AccessPolicy } from '../../authorization/access-policy.validator';
 import type { SemanticModelDocument } from '../semantic-model.validator';
 
 // Default semantic model for the wholesale_distribution v0 template (docs/data/canonical-model.md).
@@ -391,4 +392,72 @@ export function wholesaleDistributionTemplate(): SemanticModelDocument {
 
 export const TEMPLATES: Record<string, () => SemanticModelDocument> = {
   [WHOLESALE_TEMPLATE_ID]: wholesaleDistributionTemplate,
+};
+
+// Default access policy for the same template. A starting point that an admin reviews and activates;
+// the viewer role gets no data. Sales roles are limited to their assigned branches (ABAC).
+export function wholesaleDistributionPolicy(): AccessPolicy {
+  const all = ['*'];
+  const salesEntities = ['customer', 'product', 'branch', 'invoice', 'invoice_line'];
+  const salesDimensions = [
+    'invoice.invoice_date',
+    'invoice.status',
+    'branch.state',
+    'branch.name',
+    'customer.name',
+    'customer.segment',
+    'customer.city',
+    'product.category',
+    'product.sub_category',
+    'product.name',
+    'product.brand',
+  ];
+  return {
+    policy_version: 1,
+    role_grants: [
+      { role: 'owner', entities: all, measures: all, dimensions: all },
+      { role: 'tenant_admin', entities: all, measures: all, dimensions: all },
+      { role: 'finance_manager', entities: all, measures: all, dimensions: all },
+      {
+        role: 'sales_manager',
+        entities: salesEntities,
+        measures: [
+          'revenue',
+          'invoice_count',
+          'average_order_value',
+          'line_revenue',
+          'units_sold',
+          'average_selling_price',
+        ],
+        dimensions: salesDimensions,
+      },
+      {
+        role: 'sales_executive',
+        entities: salesEntities,
+        measures: ['revenue', 'invoice_count', 'units_sold'],
+        dimensions: ['invoice.invoice_date', 'customer.name', 'product.category', 'product.name'],
+      },
+    ],
+    row_rules: [
+      {
+        applies_to_roles: ['sales_manager', 'sales_executive'],
+        entity: 'branch',
+        attribute: 'id',
+        operator: 'in',
+        user_attribute: 'assigned_branch_ids',
+      },
+    ],
+    column_rules: [
+      {
+        entity: 'customer',
+        attribute: 'gstin',
+        mask: 'hide',
+        except_roles: ['owner', 'tenant_admin', 'finance_manager'],
+      },
+    ],
+  };
+}
+
+export const TEMPLATES_POLICY: Record<string, () => AccessPolicy> = {
+  [WHOLESALE_TEMPLATE_ID]: wholesaleDistributionPolicy,
 };

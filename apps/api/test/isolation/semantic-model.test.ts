@@ -9,6 +9,7 @@ import { AppModule } from '../../src/app.module';
 import { TokenVerifier, UnauthenticatedError } from '../../src/identity/token-verifier';
 import { requestIdMiddleware } from '../../src/platform/request-id/request-id';
 import { wholesaleDistributionTemplate } from '../../src/configuration/templates/wholesale-distribution';
+import { AuthorizationService } from '../../src/authorization/authorization.service';
 import { validModel } from '../fixtures/semantic-model';
 import { createFixture, type Fixture } from './harness';
 
@@ -245,5 +246,138 @@ describe('wholesale_distribution template (E3.2)', () => {
             values (${f.A.tenantId}, ${ds}, 'C1', 'X', ${branchB})`.execute(tx),
       ),
     ).rejects.toThrow(/foreign key/);
+  });
+});
+
+describe('authorized view and access policy (E3.3, E3.4)', () => {
+  const json = async (r: Response) => (await r.json()) as Record<string, unknown>;
+
+  it('policy cannot be activated before a model is published; non-admins cannot manage it', async () => {
+    const b = { token: 'ownerB', tenant: f.B.tenantId, method: 'POST' };
+    expect(
+      (
+        await call('/v1/access-policies/from-template', {
+          ...b,
+          body: { template: 'wholesale_distribution' },
+        })
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await call('/v1/access-policies', {
+          token: 'viewerA',
+          tenant: f.A.tenantId,
+          method: 'POST',
+          body: {},
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (await call('/v1/semantic-view', { token: 'ownerB', tenant: f.B.tenantId })).status,
+    ).toBe(404);
+  });
+
+  it('end to end: model, policy, a sales manager limited to branch b1, and no cross-tenant access', async () => {
+    const own = { token: 'ownerA', tenant: f.A.tenantId, method: 'POST' };
+    const tpl = await json(
+      await call('/v1/semantic-models/from-template', {
+        ...own,
+        body: { template: 'wholesale_distribution' },
+      }),
+    );
+    await call(`/v1/semantic-models/${tpl.version}/publish`, own);
+
+    // before a policy is active the sales manager sees no data
+    await f.db.tenantTx(f.A.tenantId, async (tx) => {
+      const role = await tx
+        .selectFrom('core.role')
+        .select('id')
+        .where('key', '=', 'sales_manager')
+        .executeTakeFirstOrThrow();
+      await tx
+        .deleteFrom('core.membership_role')
+        .where('membership_id', '=', f.A.viewerMembershipId)
+        .execute();
+      await tx
+        .insertInto('core.membership_role')
+        .values({
+          tenant_id: f.A.tenantId,
+          membership_id: f.A.viewerMembershipId,
+          role_id: role.id,
+        })
+        .execute();
+    });
+    const sm = { token: 'viewerA', tenant: f.A.tenantId };
+    const before = await json(await call('/v1/semantic-view', sm));
+    expect(before.measures).toEqual([]);
+
+    const draft = await json(
+      await call('/v1/access-policies/from-template', {
+        ...own,
+        body: { template: 'wholesale_distribution' },
+      }),
+    );
+    expect((await call(`/v1/access-policies/${draft.version}/activate`, own)).status).toBe(201);
+    expect((await call(`/v1/access-policies/${draft.version}/activate`, own)).status).toBe(409);
+
+    const view = (await json(await call('/v1/semantic-view', sm))) as {
+      measures: { id: string }[];
+      entities: { id: string }[];
+    };
+    expect(view.measures.map((m) => m.id)).toContain('revenue');
+    expect(view.measures.map((m) => m.id)).not.toContain('outstanding_receivables');
+    expect(view.entities.map((e) => e.id)).not.toContain('payment');
+    expect(JSON.stringify(view)).not.toContain('analytics.');
+    const ownerView = (await json(
+      await call('/v1/semantic-view', { token: 'ownerA', tenant: f.A.tenantId }),
+    )) as { measures: unknown[] };
+    expect(ownerView.measures.length).toBeGreaterThan(view.measures.length);
+
+    // the context carries the branch filter from the membership attributes (TI-14, context level)
+    const ctx = await f.db.tenantTx(f.A.tenantId, (tx) =>
+      new AuthorizationService().load(tx, f.A.tenantId, f.A.viewerUserId, f.A.viewerMembershipId),
+    );
+    expect(ctx.row_filters).toEqual([
+      { entity: 'branch', attribute: 'id', operator: 'in', values: ['b1'] },
+    ]);
+    expect(ctx.policy_version).toBe(draft.version);
+
+    // another tenant sees none of this
+    expect(
+      (await call('/v1/access-policies', { token: 'ownerB', tenant: f.B.tenantId })).status,
+    ).toBe(200);
+    const listB = (await (
+      await call('/v1/access-policies', { token: 'ownerB', tenant: f.B.tenantId })
+    ).json()) as unknown[];
+    expect(listB).toEqual([]);
+    expect(
+      (
+        await call(`/v1/access-policies/${draft.version}`, {
+          token: 'ownerB',
+          tenant: f.B.tenantId,
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await call(`/v1/access-policies/${draft.version}/activate`, {
+          token: 'ownerB',
+          tenant: f.B.tenantId,
+          method: 'POST',
+        })
+      ).status,
+    ).toBe(404);
+  });
+
+  it('rejects a policy that names unknown roles or measures, and ignores a client-supplied policy_version', async () => {
+    const own = { token: 'ownerA', tenant: f.A.tenantId, method: 'POST' };
+    const bad = await call('/v1/access-policies', {
+      ...own,
+      body: { policy_version: 99, role_grants: [{ role: 'ghost', measures: ['nope'] }] },
+    });
+    expect(bad.status).toBe(400);
+    const text = await bad.text();
+    expect(text).toContain('unknown role: ghost');
+    expect(text).toContain('unknown measures nope');
   });
 });
