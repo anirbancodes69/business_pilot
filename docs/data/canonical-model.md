@@ -1,6 +1,6 @@
 # Canonical business model and mapping
 
-Decision: [ADR-0002](../adr/ADR-0002-data-storage-strategy.md) (P-11). The `wholesale_distribution` v0 tables exist in `analytics` (migration 0004) and a default semantic model exists as code (`apps/api/src/configuration/templates/`). Mapping and sync are not implemented.
+Decision: [ADR-0002](../adr/ADR-0002-data-storage-strategy.md) (P-11). The `wholesale_distribution` v0 tables exist in `analytics` (migration 0004) and a default semantic model exists as code (`apps/api/src/configuration/templates/`). The mapping workflow (suggest, review, approve, activate) is implemented in Milestone 4 (`apps/api/src/mapping/`); sync is not.
 
 ## Industry templates
 
@@ -34,7 +34,7 @@ Each data source object maps to one canonical entity through an `entity_mapping`
 ## AI-assisted mapping workflow (D-10)
 
 1. `discoverSchema` returns fields, types and sample statistics. Sample values are shown to the user; only column names, types and statistics go to the AI.
-2. ai-engine proposes mappings with confidence and a rationale. Status: `suggested`.
+2. Suggestions come with a confidence score per field. Status: `suggested`. Today the api makes them from column names and types by name similarity (`suggestion_method: heuristic`) because the LLM provider is a dummy (ADR-0015); an ai-engine proposal is not wired yet.
 3. A tenant admin reviews, edits and approves (`in_review` → `approved`). Low-confidence and money or date fields are highlighted.
 4. Activation (`active`) triggers the initial sync and a new semantic model draft if measures need updating. Publishing that draft is a separate approval.
 5. A later breaking schema drift moves the mapping to `needs_review` and pauses sync for that object.

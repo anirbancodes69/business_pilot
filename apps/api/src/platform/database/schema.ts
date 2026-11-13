@@ -138,6 +138,26 @@ export interface DataSourceObjectTable {
   updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
 }
 
+export interface EntityMappingTable {
+  id: Generated<string>;
+  tenant_id: string;
+  data_source_id: string;
+  source_object: string;
+  canonical_entity: string;
+  status: Generated<
+    'suggested' | 'in_review' | 'approved' | 'active' | 'rejected' | 'needs_review' | 'superseded'
+  >;
+  document: Json;
+  confidence: ColumnType<string | null, number | null | undefined, number | null>;
+  created_by: string | null;
+  created_at: Generated<Date>;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+  approved_by: string | null;
+  approved_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  activated_by: string | null;
+  activated_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+}
+
 export interface Database {
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
@@ -153,4 +173,5 @@ export interface Database {
   'core.data_source': DataSourceTable;
   'core.data_source_upload': DataSourceUploadTable;
   'core.data_source_object': DataSourceObjectTable;
+  'core.entity_mapping': EntityMappingTable;
 }

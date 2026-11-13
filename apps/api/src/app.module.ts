@@ -1,6 +1,7 @@
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ConnectorsModule } from './connectors/connectors.module';
 import { ConfigurationModule } from './configuration/configuration.module';
+import { MappingModule } from './mapping/mapping.module';
 import { HealthModule } from './health/health.module';
 import { AiEngineModule } from './platform/ai-engine/ai-engine.module';
 import { ConfigModule } from './platform/config/config.module';
@@ -21,6 +22,7 @@ import { requestIdMiddleware } from './platform/request-id/request-id';
     TenancyModule,
     ConfigurationModule,
     ConnectorsModule,
+    MappingModule,
   ],
 })
 export class AppModule implements NestModule {
