@@ -26,6 +26,15 @@ import { TenancyService } from './tenancy.service';
       useFactory: (env: Env) => new OidcTokenVerifier(env.OIDC_ISSUER_URL, env.OIDC_CLIENT_ID),
     },
   ],
-  exports: [TenancyService, IdentityService, AuditService, AuthorizationService],
+  exports: [
+    TenancyService,
+    IdentityService,
+    AuditService,
+    AuthorizationService,
+    TokenVerifier,
+    AuthGuard,
+    TenantGuard,
+    PermissionGuard,
+  ],
 })
 export class TenancyModule {}

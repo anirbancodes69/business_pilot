@@ -288,17 +288,23 @@ describe('TI-15 RLS exceptions stay narrow', () => {
   });
 
   it('bp_system has no grants on analytics or non-allow-listed control-plane tables', async () => {
+    // Privileges are asked about bp_system by name, from the owner connection.
+    const tables = (await catalog(f.owner)).filter((t) => fq(t) !== 'core.tenant');
+    expect(tables.some((t) => t.schema === 'analytics')).toBe(true);
+    for (const t of tables) {
+      const priv = await sql<{
+        ok: boolean;
+      }>`select has_table_privilege('bp_system', ${fq(t)}, 'SELECT,INSERT,UPDATE,DELETE') as ok`.execute(
+        f.owner,
+      );
+      expect(priv.rows[0]?.ok, `${fq(t)}`).toBe(false);
+    }
+    const schema = await sql<{
+      ok: boolean;
+    }>`select has_schema_privilege('bp_system', 'analytics', 'USAGE') as ok`.execute(f.owner);
+    expect(schema.rows[0]?.ok).toBe(false);
     await f.owner.transaction().execute(async (tx) => {
       await sql`set local role bp_system`.execute(tx);
-      const tables = (await catalog(tx)).filter((t) => fq(t) !== 'core.tenant');
-      for (const t of tables) {
-        const priv = await sql<{
-          ok: boolean;
-        }>`select has_table_privilege('bp_system', ${fq(t)}, 'SELECT,INSERT,UPDATE,DELETE') as ok`.execute(
-          tx,
-        );
-        expect(priv.rows[0]?.ok, `${fq(t)}`).toBe(false);
-      }
       // allowed: tenant id and status only
       const ok = await sql`select id, status from core.tenant limit 1`.execute(tx);
       expect(ok.rows.length).toBeGreaterThan(0);

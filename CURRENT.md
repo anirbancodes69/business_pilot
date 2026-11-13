@@ -2,11 +2,11 @@
 
 > Living document. Update it after every meaningful change (see [CLAUDE.md](CLAUDE.md)). Only list something as Implemented if it exists in the repository and has been run or tested.
 
-**Project status:** Milestone 1 (repository foundation) is complete and merged to `main` (PR #1, CI green on `main`). Only skeletons exist: health endpoints, telemetry and infrastructure. **No product feature exists.** Product direction: AI Business Analyst (documented 2026-11-13).
+**Project status:** Milestones 1 and 2 are merged to `main` (PR #1, PR #3). Milestone 3 is in progress on `feature/m3-semantic-model`. **No end-user product feature exists yet.** Product direction: AI Business Analyst (documented 2026-11-13).
 
-**Current milestone:** [Milestone 2](ROADMAP.md#milestone-2--tenant-management-and-security), implemented on branch `feature/m2-tenant-security` (not merged).
+**Current milestone:** [Milestone 3](ROADMAP.md#milestone-3--configuration-and-semantic-model), branch `feature/m3-semantic-model` (not merged). Done so far: E3.1 for the semantic model only.
 
-**Last updated:** 2026-11-13 (Milestone 2 implemented locally)
+**Last updated:** 2026-11-13 (Milestone 3 started)
 
 ## Implemented
 
@@ -24,6 +24,9 @@
   - Endpoints: `GET /v1/me`, `/v1/tenant`, `/v1/memberships`, `/v1/memberships/:id`, `PUT /v1/memberships/:id/roles`, `GET /v1/audit-events`.
   - Tests: 40 api unit tests; 26 isolation tests against real PostgreSQL (TI-01 to TI-05 and TI-15, plus RBAC and audit). The suite was checked to fail when protections are weakened (FORCE RLS removed, a policy dropped, an extra `bp_system` grant). Compose: all services healthy, one-off `migrate` job applies as `bp_owner`, the api container has no owner credentials.
   - Decisions recorded as Proposed in [ADR-0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) (P-18 to P-20). CI has a new `tenant-isolation` job; it has not run on GitHub yet.
+- **Milestone 3, first slice (branch `feature/m3-semantic-model`, run locally 2026-11-13, CI not yet run):** `core.semantic_model` (migration 0003, forced RLS, one published version per tenant, trigger that makes published documents immutable); Zod validator for schema v0.1.0 with reference checks (`src/configuration/`); endpoints `GET/POST /v1/semantic-models`, `GET/PUT /v1/semantic-models/:version` (drafts only), `POST /v1/semantic-models/:version/publish` (separate `semantic_model:publish` permission, audited, retires the previous version). Tests: 6 validator unit tests (49 api unit tests in total after the ADR-0013 extension) and 4 isolation tests (30 isolation tests in total, TI-04 and TI-02 cover the new table from the catalog). Lint, typecheck and both suites pass.
+  - **E3.3 and E3.4, first part (2026-11-14, run locally, CI not yet run):** access policy drafts and activation (`/v1/access-policies`, `tenant:manage`, references checked against the published model and roles, audited, default policy for the wholesale template); a pure, default-deny policy evaluator that turns the active policy, the published model, the user's roles and membership attributes into data grants, resolved row filters and column masks (a missing attribute yields an empty filter, so no rows); `AuthorizationService.load` now uses it (without an active policy and a published model a user has no data grants); the authorized view builder (`GET /v1/semantic-view`) drops ungranted items, ratios with a hidden part, and anything built on a masked column, and exposes no physical names, expression or formula references, row filter values or member names. Tests now: 60 api unit, 37 isolation. A sales manager's context carries the branch filter from their membership. **Not done:** the compiler does not inject row filters or masks yet (M6), so TI-14 is only checked at context level; member synonyms are not in the view (they would reveal member names); columns masked with `redact` or `hash` hide the dimension from the view entirely; policy `role_grants` use role keys only (no custom role editor).
+  - **E3.2 (2026-11-13, run locally, CI not yet run):** migration 0004 creates schema `analytics` with the ten `wholesale_distribution` v0 canonical tables (forced RLS, tenant-scoped composite foreign keys, soft delete; the app role can select, insert and update but not delete; `bp_system` has no access). The default semantic model (`src/configuration/templates/wholesale-distribution.ts`: 7 entities, 12 measures, 13 dimensions, business rules) is valid against the validator, and a test checks every table and attribute it names against the migrated schema. `POST /v1/semantic-models/from-template` creates a draft from it. Tests now: 50 api unit, 34 isolation. TI-15 was changed to ask privileges by role name, and now also checks schema usage. Nothing writes analytics rows yet (M4/M5), and `data_source_id` has no foreign key until data sources exist.
 - Documentation (including the AI development workflow), ADRs, interface contracts and configuration schemas (Markdown and JSON Schema, draft v0). These are designs, not working software.
 - `.github/workflows/ci.yml`: all five jobs (docs, apps, secret scan including gitleaks, dependency audit, Compose smoke) passed on GitHub for branch `feature/repo-foundation` (run 42916869932) and again on `main` after the merge (run 42918295849, commit 1b0193a). CI runs on pushes to `main` and `feature/**`, and on pull requests.
 - Verified locally on 2026-11-11: all JSON files parse and all relative Markdown links resolve (checked with the CI script).
@@ -59,7 +62,8 @@
 
 ## In progress
 
-- Review and merge of `feature/m2-tenant-security` (Milestone 2).
+- Review and merge of `feature/m3-semantic-model` (Milestone 3). Review found and fixed: concurrent queries in one transaction in the authorization loader, and no guard against two active policies (migration 0005). Known and left: two simultaneous draft creations can fail with a 500 on the unique version constraint instead of a clean 409.
+- Milestone 3 (`feature/m3-semantic-model`): E3.1 done for the semantic model. E3.0 done (ADR-0013 accepted, schema and validator at 0.2.0). E3.2 and the first parts of E3.3 and E3.4 done. Not started: E3.4 data-level enforcement in the compiler (M6) and the tenant admin UI.
 
 ## Pending (next milestones)
 
@@ -79,7 +83,7 @@
   - C1, multi-step investigation vs D-07 / ADR-0006 §4 (breakdowns declared up front, "never decides to keep exploring"). Proposed bounded adaptive investigation: [ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md), D-OPEN-19. ADR-0006 §4 stays in force until it is decided.
   - C2, free-text `conversation_summary` in `answer-response` v0.1.0 vs structured analytical state: [ADR-0011](docs/adr/ADR-0011-analytical-conversation-state.md), D-OPEN-20. Contract not changed yet.
   - C3, value-matching grounding vs strict per-number provenance: [ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md), D-OPEN-21. Contract not changed yet.
-  - C4, semantic model schema v0 lacks additivity, polarity, hierarchies, drivers, business definitions and rules: [ADR-0013](docs/adr/ADR-0013-semantic-model-v1.md), D-OPEN-22. Schema not changed yet.
+  - C4, resolved 2026-11-13: ADR-0013 accepted (D-14); semantic model schema is now 0.2.0 with the extensions. The plan compiler does not enforce additivity yet (M6).
   - C5, "recommendation" as predefined checks vs evidence-based recommendations as a core capability: D-OPEN-23 (no ADR yet).
   - C6, M7 was titled "RAG"; renamed to make clear retrieval supports semantic understanding, scope unchanged.
   - C7, the evaluation suite lacked investigation, follow-up and provenance metrics; added, with unvalidated targets.
@@ -103,14 +107,14 @@
 - `schemas/` (configuration) and `contracts/` (component interfaces) both hold JSON Schemas. Their roles are defined in [contracts/README.md](contracts/README.md). Generated validators must stay in sync with them.
 - The three `packages/*` folders are placeholders. Create each package only when the first code needs it, to avoid empty build machinery.
 - No schema exists yet for the `ai_configuration` document (planned for M6).
-- The wholesale-distribution template entities and all numeric defaults (TTLs, thresholds, retention periods, limits) are unvalidated hypotheses.
+- The wholesale-distribution template (entities, measure definitions, `overdue_days = 0`, `slow_moving_days = 120`) and all numeric defaults (TTLs, thresholds, retention periods, limits) are unvalidated hypotheses.
 
 ## Important technical decisions
 
-See [DECISIONS.md](DECISIONS.md): 13 Accepted, 18 Proposed, 21 OPEN. In summary: shared SaaS first, with portable architecture; hybrid relational and vector storage; layered tenant isolation (application authorization plus PostgreSQL RLS); the LLM never decides permissions; a deterministic pipeline producing validated query plans; a sync engine independent of AI; a modular monolith plus a separate AI engine; no Kafka or Kubernetes.
+See [DECISIONS.md](DECISIONS.md): 14 Accepted, 18 Proposed, 20 OPEN. In summary: shared SaaS first, with portable architecture; hybrid relational and vector storage; layered tenant isolation (application authorization plus PostgreSQL RLS); the LLM never decides permissions; a deterministic pipeline producing validated query plans; a sync engine independent of AI; a modular monolith plus a separate AI engine; no Kafka or Kubernetes.
 
 ## Next three actionable tasks
 
-1. **Review and merge Milestone 2**, confirm the `tenant-isolation` CI job passes on GitHub, and choose the identity provider vendor (D-OPEN-03b).
-2. **Milestone 3 start:** decide ADR-0013 (semantic model v1), then the configuration service, the `wholesale_distribution v0` template and the semantic model, ABAC row filters and column masks, and entity and measure permissions.
+1. **Close M3:** review it, then push and confirm CI. Also confirm the `tenant-isolation` CI job on GitHub and choose the identity provider (D-OPEN-03b).
+2. **Milestone 4:** connector framework, starting with the provisional LLM choice (D-OPEN-01, E4.0) and the Excel upload connector.
 3. **Update `data-handling.md` and the RequestContext contract text** for the stored identity data and the accepted signing scheme.
