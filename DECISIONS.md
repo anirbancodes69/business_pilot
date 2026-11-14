@@ -55,6 +55,7 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | P-18 | Authentication through an external OIDC provider. The api verifies tokens and reads identity only. Tenant selection is a request checked against membership. No provider configured means every authenticated route fails closed (formerly D-OPEN-03, approach only). | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 | P-19 | Service trust (MVP): a shared service token for internal endpoints, plus an HMAC-SHA256 signed, 2-minute RequestContext bound to the request ID, with key rotation overlap (formerly D-OPEN-15). | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 | P-20 | RLS details: `set_config(..., true)` as the parameterized form of `SET LOCAL`; `app_user` and `permission` as the only non-RLS global tables; non-superuser `bp_owner`; `bp_system` without login until Milestone 5. | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
+| P-22 | Outbox relay and scheduler (narrows P-15 b): `bp_system` reads only the tenant list; per-tenant relay and schedule jobs run as `bp_app` under RLS; at-least-once delivery with the event ID as job ID; events are triggers, not the source of truth. Awaiting confirmation. | [0017](docs/adr/ADR-0017-outbox-relay-and-the-bp-system-role.md) |
 
 ## OPEN
 

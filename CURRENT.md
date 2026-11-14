@@ -148,7 +148,7 @@
 
 ## Important technical decisions
 
-See [DECISIONS.md](DECISIONS.md): 18 Accepted, 18 Proposed, 21 OPEN. In summary: shared SaaS first, with portable architecture; hybrid relational and vector storage; layered tenant isolation (application authorization plus PostgreSQL RLS); the LLM never decides permissions; a deterministic pipeline producing validated query plans; a sync engine independent of AI; a modular monolith plus a separate AI engine; no Kafka or Kubernetes.
+See [DECISIONS.md](DECISIONS.md): 18 Accepted, 19 Proposed, 21 OPEN. In summary: shared SaaS first, with portable architecture; hybrid relational and vector storage; layered tenant isolation (application authorization plus PostgreSQL RLS); the LLM never decides permissions; a deterministic pipeline producing validated query plans; a sync engine independent of AI; a modular monolith plus a separate AI engine; no Kafka or Kubernetes.
 
 ## Next three actionable tasks
 
