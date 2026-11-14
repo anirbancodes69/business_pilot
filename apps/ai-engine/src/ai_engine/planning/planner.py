@@ -29,6 +29,8 @@ class PlannerOutcome:
     plan: dict[str, Any] | None = None
     clarification_question: str | None = None
     problems: list[str] = field(default_factory=list)
+    # Problems found in the first reply when a repair call was needed (field paths, no user text).
+    repaired_from: list[str] = field(default_factory=list)
     llm_calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
@@ -94,5 +96,6 @@ def plan_question(
                         return out
         out.problems = problems
         if attempt == 0:
+            out.repaired_from = problems
             prompt = build_repair_prompt(build_prompt(text, view, now), problems)
     return out
