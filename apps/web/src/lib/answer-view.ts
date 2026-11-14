@@ -5,7 +5,20 @@ import { S } from './strings';
 
 export interface Evidence {
   id: string;
+  kind: 'result' | 'derived' | 'config';
+  value: number;
   display: string;
+  unit?: string;
+  result?: {
+    result_set_id: string;
+    column: string;
+    row: number;
+    plan_hash: string;
+    semantic_model_version?: number;
+    executed_at?: string;
+  };
+  derived?: { formula_id: string; input_ids: string[] };
+  config?: { rule_id: string; semantic_model_version: number };
 }
 export interface AnswerTable {
   result_set_id: string;
@@ -27,6 +40,7 @@ export interface Answer {
   clarification_question?: string;
   tables?: AnswerTable[];
   evidence?: Evidence[];
+  execution?: { plan_hashes?: string[]; semantic_model_version?: number; grounding?: string };
 }
 export interface QuestionResponse {
   conversation_id: string;

@@ -120,7 +120,7 @@ describe('answer view', () => {
       derived_calculations: [{ label: 'Change in Revenue', evidence_id: 'ev_1' }],
       possible_explanations: [{ text: 'Terms may differ.' }],
       unknowns: ['Credit limits are not in this data.'],
-      evidence: [{ id: 'ev_1', display: '-₹99,350' }],
+      evidence: [{ id: 'ev_1', kind: 'derived', value: -99350, display: '-₹99,350' }],
     });
     expect(v.sections.map((s) => s.key)).toEqual([
       'facts',
