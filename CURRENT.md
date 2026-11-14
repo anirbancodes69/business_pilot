@@ -150,6 +150,6 @@ See [DECISIONS.md](DECISIONS.md): 18 Accepted, 18 Proposed, 21 OPEN. In summary:
 
 ## Next three actionable tasks
 
-1. **Merge `feature/local-storage-and-keycloak`** after review and a green CI run (the Compose smoke test now starts Keycloak).
-2. **Decide whether to fix the cheapest open audit findings before Milestone 5:** the Excel zip guard that trusts declared sizes, and the local key-encryption key being accepted in production mode.
-3. **Start Milestone 5** (sync engine on BullMQ) when the product owner says so; storage no longer blocks it. Not started on purpose. Also update `data-handling.md` and the RequestContext contract text.
+1. **Milestone 5, in progress on `feature/m5-sync-engine`** (started 2026-11-14). Done so far: the pure row transform (`apps/api/src/sync/transform.ts`, 5 unit tests run and passing; type-check clean). Not started: BullMQ and Redis client, migration for sync runs, checkpoints, datasets, outbox and dead letters, `readSnapshot`, `readChanges` and `listKeys` on the connectors, the sync runner, and isolation tests. Nothing in M5 is integrated or run against PostgreSQL yet: Docker was not running when this slice was written.
+2. **Decide whether to fix the cheapest open audit findings before finishing Milestone 5:** the Excel zip guard that trusts declared sizes, and the local key-encryption key being accepted in production mode.
+3. **Also update** `data-handling.md` and the RequestContext contract text.
