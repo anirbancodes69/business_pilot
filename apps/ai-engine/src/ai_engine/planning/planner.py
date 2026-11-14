@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from ai_engine.llm import LlmError, LlmProvider, LlmRequest
-from ai_engine.planning.plan import parse_reply, to_query_plan, validate_against_view
+from ai_engine.planning.plan import RawPlan, parse_reply, to_query_plan, validate_against_view
 from ai_engine.planning.prompts import (
     MAX_QUESTION_CHARS,
     PROMPT_VERSION,
@@ -35,6 +35,8 @@ class PlannerOutcome:
     input_tokens: int = 0
     output_tokens: int = 0
     prompt_version: str = PROMPT_VERSION
+    raw_plan: RawPlan | None = None
+    models: list[str] = field(default_factory=list)
 
 
 def plan_question(
@@ -69,6 +71,8 @@ def plan_question(
             out.problems = [str(e)]
             return out
         out.llm_calls += 1
+        if r.model not in out.models:
+            out.models.append(r.model)
         out.input_tokens += r.input_tokens
         out.output_tokens += r.output_tokens
 
@@ -92,6 +96,7 @@ def plan_question(
                         problems = [f"time_range: {e}"]
                     else:
                         out.kind = "plan"
+                        out.raw_plan = reply.plan
                         out.problems = []
                         return out
         out.problems = problems

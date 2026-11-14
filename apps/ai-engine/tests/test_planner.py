@@ -2,7 +2,9 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from ai_engine.llm import DummyLlmProvider, LlmError, LlmRequest, LlmResponse
+from fakes import Scripted
+
+from ai_engine.llm import DummyLlmProvider, LlmError
 from ai_engine.planning.planner import plan_question
 from ai_engine.planning.prompts import build_prompt
 from ai_engine.planning.view import AuthorizedView
@@ -49,24 +51,6 @@ PLAN: dict[str, Any] = {
     "limit": 10,
 }
 GOOD: dict[str, Any] = {"outcome": "plan", "plan": PLAN}
-
-
-class Scripted:
-    """A model stand-in that replays replies and records every request. Makes no network call."""
-
-    is_real = True
-
-    def __init__(self, *replies: object) -> None:
-        self.replies = list(replies)
-        self.requests: list[LlmRequest] = []
-
-    def complete(self, request: LlmRequest) -> LlmResponse:
-        self.requests.append(request)
-        reply = self.replies.pop(0)
-        if isinstance(reply, Exception):
-            raise reply
-        text = reply if isinstance(reply, str) else json.dumps(reply)
-        return LlmResponse(text=text, model="scripted", input_tokens=100, output_tokens=20)
 
 
 def test_a_good_reply_becomes_an_absolute_query_plan() -> None:

@@ -12,3 +12,5 @@ class Settings(BaseSettings):
     llm_model_explainer: str | None = None
     llm_base_url: str = "https://api.openai.com/v1"
     llm_timeout_seconds: float = 30.0
+    api_base_url: str = "http://localhost:3001"
+    internal_service_token: str | None = None  # callers of /internal/* must present it

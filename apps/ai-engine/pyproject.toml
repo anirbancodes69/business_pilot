@@ -38,9 +38,10 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "UP", "S"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["S101"]
+"tests/*" = ["S101", "S105", "E501"]
 # Prompt text is one long string per rule on purpose.
 "src/ai_engine/planning/prompts.py" = ["E501"]
+"src/ai_engine/answer/explainer.py" = ["E501"]
 
 [tool.mypy]
 strict = true
