@@ -20,6 +20,9 @@ export const S = {
     unavailable: 'Answers are not available right now. Please try again shortly.',
     invalid: 'Please enter a question of up to 1000 characters.',
     failed: 'Something went wrong. Please try again.',
+    ai_disabled:
+      'AI answers are not switched on for this workspace yet. An administrator can enable them after reviewing what is shared with the AI provider.',
+    answer_not_kept: 'This answer was too large to keep. Ask the question again to see it.',
   } as Record<string, string>,
   sections: {
     facts: 'Verified facts',
@@ -42,8 +45,16 @@ export const S = {
     clarification_needed: 'More detail needed.',
   } as Record<string, string>,
   newChat: 'New conversation',
-  thisSession: 'This session',
-  emptySession: 'Your questions will appear here.',
+  conversations: 'Conversations',
+  noHistory: 'Your conversations will appear here.',
+  historyError: 'Could not load your conversations.',
+  deleteConversation: 'Delete conversation',
+  confirmDelete: 'Delete this conversation? This cannot be undone.',
+  yes: 'Delete',
+  cancel: 'Cancel',
+  answeredOn: 'Answered',
+  answerNotKept: 'This answer was too large to keep. Ask the question again to see it.',
+  loadingConversation: 'Opening conversation…',
   emptyTitle: (name: string | null) =>
     `What would you like to know${name ? ` about ${name}` : ''}?`,
   emptyHint:

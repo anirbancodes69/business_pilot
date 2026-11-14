@@ -16,6 +16,13 @@ export interface TenantTable {
   template_id: string | null;
   key_id: string | null;
   wrapped_data_key: Buffer | null;
+  ai_processing_enabled: Generated<boolean>;
+  ai_processing_changed_at: ColumnType<
+    Date | null,
+    Date | string | undefined,
+    Date | string | null
+  >;
+  ai_processing_changed_by: string | null;
   created_at: Generated<Date>;
 }
 
@@ -237,6 +244,8 @@ export interface ConversationTurnTable {
   conversation_id: string;
   turn: number;
   analytical_context: Json;
+  question: string | null;
+  answer: ColumnType<unknown, string | null | undefined, string | null>;
   status: string;
   plan_hashes: ColumnType<unknown, string | undefined, string>;
   created_at: Generated<Date>;

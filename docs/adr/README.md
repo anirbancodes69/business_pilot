@@ -24,5 +24,7 @@ Each ADR records one significant decision. The status register is [DECISIONS.md]
 | [0018](ADR-0018-evidence-based-recommendations.md) | How recommendations are generated | Accepted |
 | [0019](ADR-0019-openai-llm-provider.md) | OpenAI as the provisional LLM provider | Accepted (provisional) |
 | [0020](ADR-0020-web-sign-in-and-session.md) | Web sign-in and session | Proposed |
+| [0021](ADR-0021-conversation-history.md) | Conversation history | Proposed |
+| [0022](ADR-0022-ai-processing-consent-and-sensitive-fields.md) | AI processing consent and sensitive fields | Proposed |
 
 When one ADR holds decisions with different statuses, its **Decision items** table gives the status of each item, using the IDs in DECISIONS.md.

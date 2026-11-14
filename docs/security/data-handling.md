@@ -1,6 +1,6 @@
 # Data handling, retention and deletion
 
-Not implemented. Defaults are proposals pending legal review (D-OPEN-12). BusinessPilot makes no compliance claims.
+Partly implemented (conversation history, the AI processing switch, exclusion of tagged fields). Defaults are proposals pending legal review (D-OPEN-12). BusinessPilot makes no compliance claims. What goes to the AI model provider is reviewed in [llm-data-processing-review.md](llm-data-processing-review.md).
 
 ## Data classes
 
@@ -8,10 +8,10 @@ Not implemented. Defaults are proposals pending legal review (D-OPEN-12). Busine
 |---|---|---|---|
 | Configuration | Mappings, semantic models, policies | `core` | Semantic model summary only |
 | Credentials | DB passwords, OAuth tokens | `core.connector_credential` (encrypted) | Never |
-| Business records | Invoices, payments, customers | `analytics` (managed sync) or at the source (live mode) | Aggregates and bounded top-N rows. PII masked by default |
+| Business records | Invoices, payments, customers | `analytics` (managed sync) or at the source (live mode) | Bounded result rows (up to 50 per result set) including the **names** of customers, products and branches. Fields tagged `pii` or `sensitive` are excluded. Only for workspaces that switched AI processing on |
 | Personal data | Contact names, phone numbers, emails in source data | Excluded from sync unless mapped and approved | Masked unless policy allows |
 | Semantic content | Glossary, metric definitions, approved documents | Vector store + `core` | Yes, as retrieval context |
-| Conversations | Questions, answers | `core.conversation_turn` | Current conversation summary only |
+| Conversations | Questions, answers as shown, the typed analytical context | `core.conversation_turn` (private to the user, deletable) | The previous analysis's focus (ids and filter values), never the history text |
 | Telemetry | Traces, metrics | Observability stack | Never. Telemetry contains no content |
 
 ## Minimization rules
@@ -25,7 +25,7 @@ Not implemented. Defaults are proposals pending legal review (D-OPEN-12). Busine
 
 | Data | Default |
 |---|---|
-| Conversations | 180 days |
+| Conversations (question and answer text) | 90 days after the last turn (`CONVERSATION_RETENTION_DAYS`); removed when the user is next active, no scheduled purge yet |
 | `ai_execution` records (metadata, no content) | 365 days |
 | Audit events | 365 days minimum |
 | Uploaded files | Kept until replaced or deleted. The previous version is kept 30 days |

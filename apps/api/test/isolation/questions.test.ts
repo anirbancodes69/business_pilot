@@ -66,6 +66,21 @@ beforeAll(async () => {
     INTERNAL_SERVICE_TOKEN: 'x'.repeat(20),
   } as Env;
   service = new QuestionService(f.db, new AuditService(), stub as never, signer, e);
+  await f.db.tenantTx(f.A.tenantId, (tx) =>
+    tx
+      .updateTable('core.tenant')
+      .set({ ai_processing_enabled: true })
+      .where('id', '=', f.A.tenantId)
+      .execute(),
+  );
+  // Tenant B asks too (it has no published model, so its questions end in a 404).
+  await f.db.tenantTx(f.B.tenantId, (tx) =>
+    tx
+      .updateTable('core.tenant')
+      .set({ ai_processing_enabled: true })
+      .where('id', '=', f.B.tenantId)
+      .execute(),
+  );
   await f.db.tenantTx(f.A.tenantId, async (tx) => {
     await tx
       .insertInto('core.semantic_model')
@@ -208,21 +223,23 @@ describe('questions (E6.2, api side)', () => {
     expect((r.answer as Answer).analytical_context.turn).toBe(1);
   });
 
-  it('stores identifiers and a status, never the question or the answer', async () => {
+  it('keeps the question and answer for the user’s history, but never in audit events', async () => {
     reply = () => answered({ semantic_model_version: 1, turn: 1 });
     await ask({ question: 'SECRET-QUESTION-TEXT about Asha Traders' });
-    const rows = await f.db.tenantTx(f.A.tenantId, async (tx) => {
-      const turns = await tx.selectFrom('core.conversation_turn').selectAll().execute();
-      const audit = await tx
-        .selectFrom('core.audit_event')
-        .select(['action', 'metadata'])
-        .where('action', '=', 'question.asked')
-        .execute();
-      return JSON.stringify({ turns, audit });
-    });
-    expect(rows).not.toContain('SECRET-QUESTION');
-    expect(rows).not.toContain('Asha');
-    expect(rows).toContain('question.asked');
+    const { turns, audit } = await f.db.tenantTx(f.A.tenantId, async (tx) => ({
+      turns: JSON.stringify(await tx.selectFrom('core.conversation_turn').selectAll().execute()),
+      audit: JSON.stringify(
+        await tx
+          .selectFrom('core.audit_event')
+          .select(['action', 'metadata'])
+          .where('action', '=', 'question.asked')
+          .execute(),
+      ),
+    }));
+    expect(turns).toContain('SECRET-QUESTION'); // the user's own history (ADR-0021)
+    expect(audit).not.toContain('SECRET-QUESTION'); // the audit trail carries identifiers only
+    expect(audit).not.toContain('Asha');
+    expect(audit).toContain('question.asked');
   });
 
   it('a follow-up carries the stored context, and only its owner can continue a conversation', async () => {
@@ -339,7 +356,7 @@ describe('questions (E6.2, api side)', () => {
     expect(await count('core.conversation_turn')).toBe(before);
   });
 
-  it('turns are tenant-isolated and cannot be changed or removed by the application role', async () => {
+  it('turns are tenant-isolated and cannot be edited by the application role', async () => {
     expect(await count('core.conversation_turn', f.B.tenantId)).toBe(0);
     expect(await count('core.conversation', f.B.tenantId)).toBe(0);
     await expect(
@@ -347,9 +364,9 @@ describe('questions (E6.2, api side)', () => {
         sql`update core.conversation_turn set status = 'x'`.execute(tx),
       ),
     ).rejects.toThrow(/permission denied/);
-    await expect(
-      f.db.tenantTx(f.A.tenantId, (tx) => sql`delete from core.conversation`.execute(tx)),
-    ).rejects.toThrow(/permission denied/);
+    // Rows can only be deleted for their own tenant (row-level security), through the api's own checks.
+    await f.db.tenantTx(f.B.tenantId, (tx) => sql`delete from core.conversation`.execute(tx));
+    expect(await count('core.conversation')).toBeGreaterThan(0);
   });
 
   it('limits how many questions one user can ask in a window (real model calls cost money)', async () => {

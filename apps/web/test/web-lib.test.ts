@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildAnswerView, asOfText, sourceLines } from '../src/lib/answer-view';
 import { ConfigError, loadConfig } from '../src/lib/config';
+import { dayLabel, groupConversations, storedToResponse } from '../src/lib/history';
 import { newPkce, authorizeUrl } from '../src/lib/oidc';
 import { sameOrigin } from '../src/lib/origin';
 import {
@@ -208,5 +209,45 @@ describe('sources', () => {
     });
     expect(stale[0]?.stale).toBe(true);
     expect(sourceLines(base)).toEqual([]);
+  });
+});
+
+describe('conversation history helpers', () => {
+  const now = new Date('2026-11-15T10:00:00Z');
+  const c = (id: string, at: string) => ({ id, title: id, updated_at: at, turns: 1 });
+
+  it('labels days relative to today, by calendar day', () => {
+    expect(dayLabel('2026-11-15T01:00:00Z', now)).toBe('Today');
+    expect(dayLabel('2026-11-14T23:59:00Z', now)).toBe('Yesterday');
+    expect(dayLabel('2026-11-03T12:00:00Z', now)).toBe('3 Nov 2026');
+  });
+
+  it('groups newest-first conversations by day without reordering them', () => {
+    const groups = groupConversations(
+      [
+        c('a', '2026-11-15T09:00:00Z'),
+        c('b', '2026-11-15T08:00:00Z'),
+        c('c', '2026-11-14T08:00:00Z'),
+        c('d', '2026-10-01T08:00:00Z'),
+      ],
+      now,
+    );
+    expect(groups.map((g) => [g.label, g.items.map((i) => i.id)])).toEqual([
+      ['Today', ['a', 'b']],
+      ['Yesterday', ['c']],
+      ['1 Oct 2026', ['d']],
+    ]);
+  });
+
+  it('turns a stored turn back into an answer, or says there is none to show', () => {
+    const answer = { status: 'answered', summary: 's' };
+    expect(storedToResponse('x', { turn: 2, question: 'q', answer, created_at: 't' })).toEqual({
+      conversation_id: 'x',
+      turn: 2,
+      answer,
+    });
+    expect(
+      storedToResponse('x', { turn: 1, question: 'q', answer: null, created_at: 't' }),
+    ).toBeUndefined();
   });
 });

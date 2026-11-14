@@ -63,6 +63,8 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | P-20 | RLS details: `set_config(..., true)` as the parameterized form of `SET LOCAL`; `app_user` and `permission` as the only non-RLS global tables; non-superuser `bp_owner`; `bp_system` without login until Milestone 5. | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 | P-23 | Web sign-in: authorization-code flow with PKCE through Next.js server routes; tokens sealed server-side in one `HttpOnly` cookie, never in browser JavaScript. Proposed 2026-11-15, part of D-OPEN-03. | [0020](docs/adr/ADR-0020-web-sign-in-and-session.md) |
 | P-24 | UI standards: plain CSS tokens (no UI library), no numbers computed or formatted in the UI, model text as plain text, WCAG 2.2 AA target, distinct labelled answer sections. Proposed 2026-11-15. | [ui-standards.md](docs/ui/ui-standards.md) |
+| P-25 | Conversation history: the user's questions and answers are kept, private to the user, 90 days by default, deletable. Proposed 2026-11-15, asked for by the product owner. | [0021](docs/adr/ADR-0021-conversation-history.md) |
+| P-26 | AI processing consent per workspace (off by default, audited) and exclusion of `pii` and `sensitive` tagged fields from what the model sees. Proposed 2026-11-15 from the data processing review. | [0022](docs/adr/ADR-0022-ai-processing-consent-and-sensitive-fields.md) |
 
 ## OPEN
 
@@ -81,7 +83,7 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | D-OPEN-11 | Pricing and packaging | Decide using measured cost per answer. |
 | D-OPEN-12 | Default retention for conversations, query logs and audit | Configurable per tenant. Defaults to be set with legal review. |
 | D-OPEN-13 | Custom entities beyond templates | Templates plus JSONB for the MVP. Revisit dynamic tables after pilots. |
-| D-OPEN-14 | What result data the LLM may see (aggregates only vs bounded rows) and provider data-retention terms | Aggregates and bounded top-N rows. PII columns masked unless policy allows. |
+| D-OPEN-14 | What result data the LLM may see (aggregates only vs bounded rows) and provider data-retention terms | **Reviewed 2026-11-15, see [the review](docs/security/llm-data-processing-review.md).** Bounded rows (up to 50 per result set) with member names, fields tagged pii or sensitive excluded, consent per workspace. Still OPEN: provider terms (ZDR, DPA, residency), customer-name pseudonymization, counsel. Blocks any real customer data. |
 | D-OPEN-17 | Backup and recovery targets (RPO/RTO), and backup retention window | Set before Milestone 10. The retention window must be disclosed to customers (see data-handling). |
 | D-OPEN-18 | Usage metering and quota model (questions, tokens, sync volume per tenant) | Meter from Milestone 6 (in `ai_execution`). Quota limits follow D-OPEN-11. |
 | D-OPEN-24 | Object storage product (S3-compatible) for uploads and files. The MinIO images used locally are no longer published | Choose a supported S3-compatible store (a managed one in Model A). Interim: a local directory on a shared Docker volume, see D-17. Decide before the first deployment on more than one machine and before any pilot. |

@@ -47,6 +47,12 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: 'unavailable' }, { status: 503 });
   }
   if (!res.ok) {
+    // One 403 has its own message: the workspace has not agreed to AI processing yet (ADR-0022).
+    if (res.status === 403) {
+      const body = (await res.json().catch(() => ({}))) as { message?: unknown };
+      if (body.message === 'ai_processing_disabled')
+        return NextResponse.json({ error: 'ai_disabled' }, { status: 403 });
+    }
     const [status, error] = ERRORS[res.status] ?? [502, 'failed'];
     return NextResponse.json({ error }, { status });
   }

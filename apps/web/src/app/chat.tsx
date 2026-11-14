@@ -2,6 +2,13 @@
 
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { QuestionResponse } from '../lib/answer-view';
+import {
+  type ConversationSummary,
+  type StoredTurn,
+  dayLabel,
+  groupConversations,
+  storedToResponse,
+} from '../lib/history';
 import { S } from '../lib/strings';
 import { evidenceIndex } from '../lib/visuals';
 import { AnswerCard, AnswerSkeleton } from '../components/answer-card';
@@ -14,6 +21,8 @@ interface Turn {
   response?: QuestionResponse;
   error?: string;
   pending?: boolean;
+  /** Set for a turn reopened from the history: when it was answered. */
+  answeredAt?: string;
 }
 
 const MAX = 1000;
@@ -24,10 +33,30 @@ export function Chat({ tenantName }: { tenantName: string | null }) {
   const [busy, setBusy] = useState(false);
   const [nav, setNav] = useState(false);
   const [open, setOpen] = useState<{ turn: number; evidenceId: string } | undefined>();
+  const [history, setHistory] = useState<ConversationSummary[] | undefined>();
+  const [historyFailed, setHistoryFailed] = useState(false);
+  const [active, setActive] = useState<string | undefined>();
+  const [loadingId, setLoadingId] = useState<string | undefined>();
+  const [confirming, setConfirming] = useState<string | undefined>();
   const conversation = useRef<string | undefined>(undefined);
   const nextId = useRef(1);
   const area = useRef<HTMLTextAreaElement>(null);
   const end = useRef<HTMLDivElement>(null);
+
+  const refreshHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/conversations', { cache: 'no-store' });
+      if (!res.ok) throw new Error('failed');
+      setHistory(((await res.json()) as { conversations: ConversationSummary[] }).conversations);
+      setHistoryFailed(false);
+    } catch {
+      setHistoryFailed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshHistory();
+  }, [refreshHistory]);
 
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -60,6 +89,7 @@ export function Chat({ tenantName }: { tenantName: string | null }) {
         if (res.ok) {
           const data = (await res.json()) as QuestionResponse;
           conversation.current = data.conversation_id;
+          setActive(data.conversation_id);
           patch = { response: data };
         } else {
           const body = (await res.json().catch(() => ({}))) as { error?: string };
@@ -71,8 +101,9 @@ export function Chat({ tenantName }: { tenantName: string | null }) {
       setTurns((t) => t.map((x) => (x.id === id ? { ...x, ...patch, pending: false } : x)));
       setBusy(false);
       area.current?.focus();
+      void refreshHistory();
     },
-    [busy],
+    [busy, refreshHistory],
   );
 
   function submit(e: FormEvent): void {
@@ -84,8 +115,52 @@ export function Chat({ tenantName }: { tenantName: string | null }) {
     setTurns([]);
     setOpen(undefined);
     conversation.current = undefined;
+    setActive(undefined);
+    setConfirming(undefined);
     setNav(false);
     area.current?.focus();
+  }
+
+  async function openConversation(id: string): Promise<void> {
+    if (busy || loadingId) return;
+    setLoadingId(id);
+    setNav(false);
+    try {
+      const res = await fetch(`/api/conversations/${id}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('failed');
+      const data = (await res.json()) as { conversation_id: string; turns: StoredTurn[] };
+      setOpen(undefined);
+      conversation.current = data.conversation_id;
+      setActive(data.conversation_id);
+      setTurns(
+        data.turns.map((t) => {
+          const response = storedToResponse(data.conversation_id, t);
+          return {
+            id: nextId.current++,
+            question: t.question ?? '',
+            response,
+            error: response ? undefined : 'answer_not_kept',
+            answeredAt: t.created_at,
+          };
+        }),
+      );
+    } catch {
+      setHistoryFailed(true);
+    } finally {
+      setLoadingId(undefined);
+    }
+  }
+
+  async function deleteConversation(id: string): Promise<void> {
+    setConfirming(undefined);
+    try {
+      const res = await fetch(`/api/conversations/${id}`, { method: 'DELETE' });
+      if (res.status !== 204 && res.status !== 404) throw new Error('failed');
+      if (id === active) reset();
+      await refreshHistory();
+    } catch {
+      setHistoryFailed(true);
+    }
   }
 
   const drawer = useMemo(() => {
@@ -120,20 +195,66 @@ export function Chat({ tenantName }: { tenantName: string | null }) {
           <IconPlus />
           {S.newChat}
         </button>
-        <nav className="history" aria-label={S.thisSession}>
-          <p className="eyebrow">{S.thisSession}</p>
-          {turns.length === 0 ? (
-            <p className="muted small">{S.emptySession}</p>
+        <nav className="history" aria-label={S.conversations}>
+          {historyFailed && (
+            <p role="alert" className="muted small">
+              {S.historyError}
+            </p>
+          )}
+          {history === undefined ? null : history.length === 0 ? (
+            <p className="muted small">{S.noHistory}</p>
           ) : (
-            <ul>
-              {turns.map((t) => (
-                <li key={t.id}>
-                  <a href={`#turn-${t.id}`} onClick={() => setNav(false)} title={t.question}>
-                    {t.question}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            groupConversations(history, new Date()).map((g) => (
+              <section key={g.label}>
+                <p className="eyebrow">{g.label}</p>
+                <ul>
+                  {g.items.map((c) => (
+                    <li key={c.id} className={c.id === active ? 'current' : undefined}>
+                      {confirming === c.id ? (
+                        <span className="confirm" role="group" aria-label={S.confirmDelete}>
+                          <span>{S.confirmDelete}</span>
+                          <button
+                            type="button"
+                            className="link danger"
+                            onClick={() => void deleteConversation(c.id)}
+                          >
+                            {S.yes}
+                          </button>
+                          <button
+                            type="button"
+                            className="link"
+                            onClick={() => setConfirming(undefined)}
+                          >
+                            {S.cancel}
+                          </button>
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="conv"
+                            onClick={() => void openConversation(c.id)}
+                            title={c.title}
+                            aria-current={c.id === active ? 'true' : undefined}
+                            disabled={loadingId === c.id}
+                          >
+                            {c.title}
+                          </button>
+                          <button
+                            type="button"
+                            className="icon-btn del"
+                            onClick={() => setConfirming(c.id)}
+                            aria-label={`${S.deleteConversation}: ${c.title}`}
+                          >
+                            <IconClose />
+                          </button>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))
           )}
         </nav>
         <div className="side-foot">
@@ -194,6 +315,11 @@ export function Chat({ tenantName }: { tenantName: string | null }) {
                 {turns.map((t) => (
                   <article key={t.id} id={`turn-${t.id}`} className="turn">
                     <h2 className="question">{t.question}</h2>
+                    {t.answeredAt && (
+                      <p className="muted small answered-on">
+                        {S.answeredOn} {dayLabel(t.answeredAt, new Date())}
+                      </p>
+                    )}
                     {t.pending ? (
                       <AnswerSkeleton />
                     ) : t.error ? (

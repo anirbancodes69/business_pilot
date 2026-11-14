@@ -47,9 +47,14 @@ export interface AuthorizedView {
   glossary: { term: string; definition: string; maps_to?: string }[];
 }
 
+/** Fields the tenant tagged as personal or sensitive are not offered to the AI model by default. */
+const flagged = (tags: readonly string[] | undefined): boolean =>
+  (tags ?? []).some((t) => t === 'pii' || t === 'sensitive');
+
 export function buildAuthorizedView(
   model: SemanticModelDocument,
   ctx: AuthorizationContext,
+  options: { forAi?: boolean } = {},
 ): AuthorizedView {
   const entities = new Set(ctx.granted.entities);
   const masked = new Set(ctx.column_masks.map((m) => `${m.entity}.${m.attribute}`));
@@ -57,6 +62,7 @@ export function buildAuthorizedView(
   // Dimensions: granted, on a granted entity, and the underlying column is not masked.
   const dims = model.dimensions.filter(
     (d) =>
+      !(options.forAi && flagged(d.tags)) &&
       ctx.granted.dimensions.includes(d.id) &&
       entities.has(d.entity) &&
       !masked.has(`${d.entity}.${d.attribute}`),
@@ -67,6 +73,7 @@ export function buildAuthorizedView(
   // Iterate to a fixed point so a ratio whose part was removed is removed too.
   let measures = model.measures.filter(
     (m) =>
+      !(options.forAi && flagged(m.tags)) &&
       ctx.granted.measures.includes(m.id) &&
       entities.has(m.entity) &&
       !measureColumns(model, m.id).some((c) => masked.has(`${c.entity}.${c.column}`)),

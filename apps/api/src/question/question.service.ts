@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  ForbiddenException,
   HttpException,
   Inject,
   Injectable,
@@ -13,7 +14,7 @@ import { buildAuthorizedView } from '../configuration/authorized-view';
 import { validateSemanticModel } from '../configuration/semantic-model.validator';
 import { Env_TOKEN } from '../platform/config/config.module';
 import type { Env } from '../platform/config/env';
-import { DatabaseService } from '../platform/database/database.module';
+import { DatabaseService, type Tx, sql } from '../platform/database/database.module';
 import { AiEngineClient } from '../platform/ai-engine/ai-engine.client';
 import { RequestContextSigner } from '../platform/service-auth/request-context';
 import {
@@ -51,6 +52,8 @@ const answerShape = z.looseObject({
     .optional(),
 });
 
+/** An answer larger than this is not kept for the history (the conversation still is). */
+export const MAX_STORED_ANSWER_CHARS = 800_000;
 export const QUESTIONS_PER_WINDOW = 20;
 export const WINDOW_MS = 10 * 60_000;
 
@@ -89,6 +92,24 @@ export class QuestionService {
     @Inject(Env_TOKEN) private readonly env: Env,
   ) {}
 
+  /** Deletes this user's conversations whose last turn is older than the retention period. */
+  async purgeExpired(tx: Tx, tenantId: string, userId: string, now: Date): Promise<void> {
+    const cutoff = new Date(now.getTime() - this.env.CONVERSATION_RETENTION_DAYS * 86_400_000);
+    await sql`
+      WITH expired AS (
+        SELECT c.id FROM core.conversation c
+         WHERE c.tenant_id = ${tenantId} AND c.user_id = ${userId}
+           AND COALESCE((SELECT max(t.created_at) FROM core.conversation_turn t
+                          WHERE t.tenant_id = c.tenant_id AND t.conversation_id = c.id), c.created_at) < ${cutoff}
+      ), gone AS (
+        DELETE FROM core.conversation_turn t USING expired e
+         WHERE t.tenant_id = ${tenantId} AND t.conversation_id = e.id RETURNING 1
+      )
+      DELETE FROM core.conversation c USING expired e WHERE c.tenant_id = ${tenantId} AND c.id = e.id`.execute(
+      tx,
+    );
+  }
+
   private throttle(tenantId: string, userId: string, now: number): void {
     const key = `${tenantId}:${userId}`;
     const fresh = (this.recent.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
@@ -112,6 +133,13 @@ export class QuestionService {
     this.throttle(tenantId, userId, now.getTime());
 
     const loaded = await this.db.tenantTx(tenantId, async (tx) => {
+      // The workspace must have agreed to AI processing before anything leaves for the model provider.
+      const tenant = await tx
+        .selectFrom('core.tenant')
+        .select('ai_processing_enabled')
+        .where('id', '=', tenantId)
+        .executeTakeFirst();
+      if (!tenant?.ai_processing_enabled) throw new ForbiddenException('ai_processing_disabled');
       const row = await tx
         .selectFrom('core.semantic_model')
         .select('document')
@@ -145,7 +173,8 @@ export class QuestionService {
     if (!loaded) throw new NotFoundException('no published semantic model');
     const { model, previous } = loaded;
 
-    const view = buildAuthorizedView(model, authz);
+    // What the model sees excludes anything tagged personal or sensitive (ADR-0022).
+    const view = buildAuthorizedView(model, authz, { forAi: true });
     const { context: carried } = previous
       ? revalidateContext(previous.context, view)
       : { context: undefined };
@@ -193,6 +222,9 @@ export class QuestionService {
           .insertInto('core.conversation')
           .values({ tenant_id: tenantId, id: conversationId, user_id: userId })
           .execute();
+      // Conversations past their retention period are removed when their user is next active.
+      await this.purgeExpired(tx, tenantId, userId, now);
+      const shown = JSON.stringify({ ...(raw as object), analytical_context: stored });
       await tx
         .insertInto('core.conversation_turn')
         .values({
@@ -200,6 +232,8 @@ export class QuestionService {
           conversation_id: conversationId,
           turn: turnNumber,
           analytical_context: JSON.stringify(stored),
+          question: input.question,
+          answer: shown.length <= MAX_STORED_ANSWER_CHARS ? shown : null,
           status: answer.data.status,
           plan_hashes: JSON.stringify(answer.data.execution?.plan_hashes ?? []),
         })
