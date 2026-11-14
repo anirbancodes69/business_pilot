@@ -111,7 +111,8 @@ export function validateMappingDocument(
   if (doc.updated_at_field !== undefined) {
     const col = columns.get(doc.updated_at_field);
     if (!col) problems.push('updated_at_field: unknown column');
-    else if (col.data_type !== 'date') problems.push('updated_at_field: must be a date column');
+    else if (!/^(date|timestamp)/.test(col.data_type))
+      problems.push('updated_at_field: must be a date or timestamp column');
   }
 
   const seen = new Set<string>();

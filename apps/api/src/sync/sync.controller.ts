@@ -71,6 +71,27 @@ export class SyncController {
     );
   }
 
+  /** Rows that could not be loaded in one run: keys, field names and error codes, never values. */
+  @Get('data-sources/:id/sync-runs/:runId/dead-letters')
+  @RequirePermission('data_source:manage')
+  async deadLetters(
+    @Req() req: AuthedRequest,
+    @Param('id') id: string,
+    @Param('runId') runId: string,
+  ) {
+    const { tenantId } = req.auth as NonNullable<AuthedRequest['auth']>;
+    return this.db.tenantTx(tenantId, (tx) =>
+      tx
+        .selectFrom('core.sync_dead_letter')
+        .select(['source_object', 'source_key', 'field', 'error_code', 'created_at'])
+        .where('data_source_id', '=', uuidParam(id))
+        .where('run_id', '=', uuidParam(runId))
+        .orderBy('created_at')
+        .limit(500)
+        .execute(),
+    );
+  }
+
   /** Freshness per dataset: data_version, status and the last successful sync time. */
   @Get('data-sources/:id/datasets')
   @RequirePermission('data_source:manage')

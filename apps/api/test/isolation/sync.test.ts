@@ -1,5 +1,6 @@
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { AuditService } from '../../src/audit/audit.service';
 import { ExcelConnector } from '../../src/connectors/excel/excel.connector';
 import type { DataSourceService } from '../../src/connectors/data-source.service';
 import type { MappingDocument } from '../../src/mapping/mapping-document';
@@ -113,7 +114,7 @@ function service(file: () => Buffer): SyncService {
         },
       }),
   } as unknown as DataSourceService;
-  return new SyncService(f.db, sources);
+  return new SyncService(f.db, sources, new AuditService());
 }
 
 const book = (inv = invoices) =>

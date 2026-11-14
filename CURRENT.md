@@ -10,6 +10,7 @@
 
 ## Implemented
 
+- **Milestone 5, second slice (same branch, run locally 2026-11-14):** E5.2 PostgreSQL timestamp-cursor incremental sync, E5.3 delete propagation by key-set reconciliation and schema drift pause (`drift.ts`, `sync.service.ts`), a dead-letter endpoint, and `updated_at_field` now accepts timestamp columns. Verified with 88 isolation tests (including real PostgreSQL source tests for incremental reads, hard deletes, drift pause, Excel deletes, the empty-source refusal and the shared-entity guard) and 5 drift unit tests. Not verified: the HTTP endpoints end to end. Timestamp cursors miss rows with a null `updated_at` and updates that do not touch it: reconciliation finds deletes only, not such edits.
 - **Milestone 5, first slice (branch `feature/m5-sync-engine`, not merged; run locally 2026-11-14):** migration 0009 (`sync_run`, `sync_checkpoint`, `dataset`, `sync_dead_letter`, `outbox_event`, all with forced RLS); pure row transform; `readSnapshot` on the Excel and PostgreSQL connectors; `SyncService` (full snapshot, idempotent upserts, content hash, reference resolution, dead letters without row values, one running sync per source, `data_version` bump and outbox event per run); BullMQ queue and worker consumer (`bullmq` and `ioredis` added: BullMQ is in ADR-0008, `ioredis` is the client BullMQ 6 requires); endpoints `POST /v1/data-sources/:id/sync`, `GET .../sync-runs`, `GET .../datasets`; Redis health check on the worker. Verified: lint, build, 171 unit tests, 83 isolation tests (including 6 sync tests, 3 queue tests against real Redis, and tenant B seeing none of A's sync state), and the Compose stack healthy with the worker connected to Redis. **Not verified:** the HTTP endpoints were not called end to end, and the PostgreSQL connector's `readSnapshot` has no test yet. The outbox has no relay.
 - **Milestone 1 skeletons (merged to `main` 2026-11-11; verified locally and in CI):**
   - pnpm workspace (`apps/web`, `apps/api`) plus a uv project (`apps/ai-engine`); shared ESLint, Prettier, ruff, mypy strict.
@@ -151,6 +152,6 @@ See [DECISIONS.md](DECISIONS.md): 18 Accepted, 18 Proposed, 21 OPEN. In summary:
 
 ## Next three actionable tasks
 
-1. **Milestone 5, in progress on `feature/m5-sync-engine`.** Next: E5.2 incremental sync (timestamp cursor for PostgreSQL, fingerprint diff for Excel), then E5.3 delete propagation and schema drift, E5.4 the outbox relay (needs an ADR first: it reads across tenants, which is an RLS exception), E5.5 retry visibility, scheduling and the UI.
+1. **Milestone 5, in progress on `feature/m5-sync-engine`.** Next: E5.4 the outbox relay (needs an ADR first: it reads across tenants, which is an RLS exception), E5.5 retry visibility, scheduling and the UI.
 2. **Decide whether to fix the cheapest open audit findings before finishing Milestone 5:** the Excel zip guard that trusts declared sizes, and the local key-encryption key being accepted in production mode.
 3. **Also update** `data-handling.md` and the RequestContext contract text.

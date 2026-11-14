@@ -108,7 +108,18 @@ export interface Connector {
     columns: string[],
     batchSize: number,
     onBatch: (rows: SourceRow[]) => Promise<void>,
+    options?: ReadOptions,
   ): Promise<void>;
+}
+
+export interface ReadOptions {
+  /**
+   * Incremental read: only rows whose `updatedAtField` is at or after `since` (an ISO timestamp),
+   * in ascending order of that field. Connectors without a timestamp cursor ignore it and read
+   * everything, which stays correct because the caller skips unchanged rows by content hash.
+   */
+  updatedAtField?: string;
+  since?: string;
 }
 
 // Typed errors (contracts/connector/README.md). Messages never contain credentials or row values.
