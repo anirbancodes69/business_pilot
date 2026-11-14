@@ -14,7 +14,8 @@ def _d(ev: Evidence) -> Decimal:
 
 
 def abs_change(ledger: EvidenceLedger, current: Evidence, previous: Evidence) -> Evidence:
-    unit = current.unit
+    # A change between two percentages is in percentage points, not in percent.
+    unit = "percentage_points" if current.unit == "percent" else current.unit
     return ledger.add_derived(
         _d(current) - _d(previous), unit, "abs_change", (current.id, previous.id)
     )

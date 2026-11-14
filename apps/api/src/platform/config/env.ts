@@ -18,6 +18,13 @@ const schema = z.object({
   // Job queue (BullMQ on Redis). Unset = no jobs can be queued: sync requests then fail closed.
   REDIS_URL: z.string().url().optional(),
   REDIS_PASSWORD: z.string().min(1).optional(),
+  // Exact result cache (E6.7, ADR-0007). On by default when Redis is configured. The TTL bounds how
+  // long a result can outlive a change that did not bump a dataset version (a manual database edit).
+  RESULT_CACHE_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  RESULT_CACHE_TTL_SECONDS: z.coerce.number().int().min(10).max(604_800).default(86_400),
   // Only tests change this, so that a test queue never competes with a running worker.
   SYNC_QUEUE_NAME: z
     .string()

@@ -4,7 +4,7 @@ Ordering principle: reach a **working vertical slice** fast. The slice is one pi
 
 Where a later milestone's items are needed by the slice, a thin version is pulled forward, and each milestone says what it defers.
 
-Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestone 5 **Merged to `main` (PR #8), implemented at API level** (the sync UI moved to M9); Milestone 6 **In progress (E6.0 decided; E6.3 plan compiler and executor done at API level)**; Milestones 7 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
+Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestone 5 **Merged to `main` (PR #8), implemented at API level** (the sync UI moved to M9); Milestone 6 **Built on branch `feature/m6-e60-decisions`, pending the product owner's browser review, CI and merge** (E6.0 to E6.9 all implemented in a first version; the acceptance review is in [CURRENT.md](CURRENT.md)); Milestones 7 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
 
 ---
 

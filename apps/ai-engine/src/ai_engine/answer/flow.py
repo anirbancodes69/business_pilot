@@ -13,6 +13,9 @@ from ai_engine.analysis.calculations import abs_change, pct_change
 from ai_engine.analysis.evidence import Evidence, EvidenceLedger, ResultRef
 from ai_engine.analysis.grounding import referenced_ids
 from ai_engine.answer import explainer
+from ai_engine.answer.attention import run_briefing
+from ai_engine.answer.changes import CHANGES_ID, MemberChanges, build_member_changes
+from ai_engine.answer.changes import eligible as changes_eligible
 from ai_engine.answer.context import build_context
 from ai_engine.answer.findings import FINDINGS_ID, build_findings
 from ai_engine.answer.interpretation import interpret
@@ -34,6 +37,7 @@ from ai_engine.recommendations.playbooks import (
     for_comparison,
     for_customer_ranking,
     for_investigation,
+    for_member_changes,
     needs_total,
     recommend,
 )
@@ -260,6 +264,7 @@ def _diagnosis(
         "tool_calls": inv.calls,
         "prompt_versions": versions,
         "model_ids": [],
+        "cache": {"exact_result_hits": sum(int(s.result.cache_hit) for s in steps)},
     }
     sources: list[dict[str, Any]] = []
     freshness: list[dict[str, Any]] = []
@@ -419,6 +424,36 @@ def answer_question(
                 "That question is not something I can answer from your business data.",
             )
         )
+    if outcome.kind == "attention" and outcome.attention_period is not None:
+        ledger = EvidenceLedger(view.tenant_settings.number_format or "indian")
+        b = run_briefing(
+            view, outcome.attention_period, tools, req.request_context, request_id, ledger
+        )
+        return finish(
+            {
+                "request_id": request_id,
+                "intent": "recommendation",
+                "status": "answered",
+                "summary": b.summary,
+                "interpretation": b.interpretation,
+                "verified_facts": b.facts,
+                "recommendations": _recs(b.recommendations),
+                "unknowns": b.unknowns,
+                "evidence": [e.model_dump(mode="json", exclude_none=True) for e in ledger.items()],
+                "sources": b.sources,
+                "freshness": b.freshness,
+                "execution": {
+                    "plan_hashes": b.plan_hashes,
+                    "semantic_model_version": b.semantic_model_version,
+                    "grounding": "not_applicable",
+                    "tool_calls": b.calls,
+                    "cache": {"exact_result_hits": b.cache_hits},
+                    "prompt_versions": versions,
+                    "model_ids": [],
+                },
+            }
+        )
+
     if outcome.kind != "plan" or outcome.plan is None:
         return finish(
             _unavailable(
@@ -476,6 +511,7 @@ def answer_question(
         "prompt_versions": versions,
         "model_ids": [],
     }
+    execution["cache"] = {"exact_result_hits": int(result.cache_hit)}
     base: dict[str, Any] = {
         "request_id": request_id,
         "intent": intent,
@@ -507,16 +543,16 @@ def answer_question(
     data, _ = _build_evidence(result, ledger)
     labels = {m.id: m.label for m in view.measures}
     derived = _derived(result, ledger, labels)
-    versions["explainer"] = explainer.PROMPT_VERSION
-    ex = explainer.explain(
-        req.question,
-        data,
-        derived,
-        notes,
-        {rs.id for rs in result.result_sets},
-        ledger,
-        provider,
+    result_ids = {rs.id for rs in result.result_sets}
+    # Two periods split by one dimension: show how each member changed, worst first (in code).
+    changes: MemberChanges | None = (
+        build_member_changes(plan, view, result, ledger) if changes_eligible(plan) else None
     )
+    if changes is not None and changes.table is not None:
+        base["tables"] = [changes.table, *base["tables"]]
+        data, notes, result_ids = changes.data, [changes.note], {CHANGES_ID}
+    versions["explainer"] = explainer.PROMPT_VERSION
+    ex = explainer.explain(req.question, data, derived, notes, result_ids, ledger, provider)
     explained.append(ex)
     execution["model_ids"] = ex.models
     unknowns = list(ex.reply.unknowns) if ex.reply else []
@@ -543,7 +579,7 @@ def answer_question(
         summary, status = ex.rendered["summary"], "answered"
     else:
         execution["grounding"] = "failed_degraded"
-        facts = _degraded_facts(result, ledger)
+        facts = changes.facts if changes is not None else _degraded_facts(result, ledger)
         hypotheses = []
         summary, status = "Here are the results from your data.", "answered_facts_only"
         unknowns.append("A written explanation was not available for this answer.")
@@ -556,11 +592,13 @@ def answer_question(
             total_result = tools.execute_plan(req.request_context, request_id, total_plan)
             execution["tool_calls"] += 1
             execution["plan_hashes"].append(total_result.plan_hash)
+            execution["cache"]["exact_result_hits"] += int(total_result.cache_hit)
         except ToolError:
             total_result = None
     recs = recommend(
         [
             *for_comparison(view, derived),
+            *(for_member_changes(changes) if changes is not None else []),
             *for_customer_ranking(view, plan, result, ledger, total_result),
         ]
     )

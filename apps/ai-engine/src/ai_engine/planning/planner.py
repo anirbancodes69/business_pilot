@@ -11,7 +11,13 @@ from datetime import datetime
 from typing import Any, Literal
 
 from ai_engine.llm import LlmError, LlmProvider, LlmRequest
-from ai_engine.planning.plan import RawPlan, parse_reply, to_query_plan, validate_against_view
+from ai_engine.planning.plan import (
+    RawPlan,
+    parse_reply,
+    resolve_period,
+    to_query_plan,
+    validate_against_view,
+)
 from ai_engine.planning.prompts import (
     MAX_QUESTION_CHARS,
     PROMPT_VERSION,
@@ -22,10 +28,14 @@ from ai_engine.planning.prompts import (
 from ai_engine.planning.time_resolver import TimeResolutionError
 from ai_engine.planning.view import AuthorizedView
 
+# The model may spend part of this on hidden reasoning before it writes a character, so it is
+# generous: a reply cut off at the limit is a failure (seen on an injection-style question at 700).
+OUTPUT_LIMIT = 2000
+
 
 @dataclass
 class PlannerOutcome:
-    kind: Literal["plan", "clarify", "out_of_scope", "failed"]
+    kind: Literal["plan", "clarify", "out_of_scope", "attention", "failed"]
     plan: dict[str, Any] | None = None
     clarification_question: str | None = None
     problems: list[str] = field(default_factory=list)
@@ -39,6 +49,8 @@ class PlannerOutcome:
     models: list[str] = field(default_factory=list)
     # The typed change a follow-up was understood as (None for a question planned from scratch).
     delta: dict[str, Any] | None = None
+    # For an attention question: the absolute period to look at.
+    attention_period: dict[str, Any] | None = None
 
 
 def plan_question(
@@ -66,7 +78,7 @@ def plan_question(
                     prompt=prompt,
                     role="planner",
                     json_output=True,
-                    max_output_tokens=700,
+                    max_output_tokens=OUTPUT_LIMIT,
                 )
             )
         except LlmError as e:
@@ -82,6 +94,13 @@ def plan_question(
         if reply is not None:
             if reply.outcome == "out_of_scope":
                 out.kind = "out_of_scope"
+                return out
+            if reply.outcome == "attention":
+                try:
+                    out.attention_period = resolve_period(reply.period, view, now)
+                except TimeResolutionError:
+                    out.attention_period = resolve_period(None, view, now)
+                out.kind = "attention"
                 return out
             if reply.outcome == "clarify":
                 out.kind = "clarify"

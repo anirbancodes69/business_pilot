@@ -234,8 +234,11 @@ function compileOne(
     const m = measureById.get(id);
     if (!m || depth > 3) return reject('invalid', 'cannot compile the measure');
     if (m.entity !== base) return reject('invalid', 'a ratio must use parts from its own entity');
-    if (m.aggregation === 'ratio')
-      return `(${measureExpr(m.numerator as string, depth + 1)})::numeric / NULLIF(${measureExpr(m.denominator as string, depth + 1)}, 0)`;
+    if (m.aggregation === 'ratio') {
+      // A ratio whose unit is percent is expressed in percent (22.0), not as a fraction (0.22).
+      const scale = m.unit === 'percent' ? ' * 100' : '';
+      return `(${measureExpr(m.numerator as string, depth + 1)})::numeric / NULLIF(${measureExpr(m.denominator as string, depth + 1)}, 0)${scale}`;
+    }
     if (m.aggregation === 'custom') {
       const ex = CUSTOM_EXPRESSIONS[m.expression_ref ?? ''];
       if (!ex || ex.entity !== m.entity) return reject('invalid', 'measure is not supported yet');
@@ -243,6 +246,10 @@ function compileOne(
         rule: (rid) => rules.get(rid),
         param,
         asOf: () => param(input.asOf, 'date'),
+        periodDays: () => {
+          if (!('start' in range)) return reject('invalid', 'the time range must be absolute');
+          return Math.round((Date.parse(range.end) - Date.parse(range.start)) / 86_400_000) + 1;
+        },
       });
     }
     const attr = m.attribute ? col(m.entity, m.attribute) : '';

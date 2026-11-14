@@ -266,6 +266,64 @@ describe('questions (E6.2, api side)', () => {
     expect(sent).toEqual([]);
   });
 
+  it('a follow-up after the user lost access to something never carries it back', async () => {
+    const setRole = (key: string) =>
+      f.db.tenantTx(f.A.tenantId, async (tx) => {
+        const role = await tx
+          .selectFrom('core.role')
+          .select('id')
+          .where('key', '=', key)
+          .executeTakeFirstOrThrow();
+        await tx
+          .deleteFrom('core.membership_role')
+          .where('membership_id', '=', f.A.viewerMembershipId)
+          .execute();
+        await tx
+          .insertInto('core.membership_role')
+          .values({
+            tenant_id: f.A.tenantId,
+            membership_id: f.A.viewerMembershipId,
+            role_id: role.id,
+          })
+          .execute();
+      });
+    const asViewer = async (conversationId?: string) =>
+      service.ask({
+        tenantId: f.A.tenantId,
+        userId: f.A.viewerUserId,
+        authz: await f.db.tenantTx(f.A.tenantId, (tx) =>
+          authz.load(tx, f.A.tenantId, f.A.viewerUserId, f.A.viewerMembershipId),
+        ),
+        question: 'follow up',
+        conversationId,
+      });
+    await setRole('finance_manager');
+    reply = () =>
+      answered({
+        semantic_model_version: 1,
+        turn: 1,
+        focus: {
+          metrics: ['outstanding_receivables', 'revenue'],
+          dimensions: ['customer.name'],
+          filters: [{ dimension: 'customer.segment', operator: 'eq', values: ['retail'] }],
+        },
+      });
+    const first = await asViewer();
+    sent = [];
+    const same = await asViewer(first.conversation_id);
+    expect(same.turn).toBe(2);
+    expect(sent[0]?.analytical_context?.focus?.metrics).toEqual([
+      'outstanding_receivables',
+      'revenue',
+    ]);
+
+    await setRole('sales_manager'); // the user's access narrows: no receivables any more
+    sent = [];
+    await asViewer(first.conversation_id);
+    expect(sent[0]?.analytical_context?.focus?.metrics).toEqual(['revenue']);
+    expect(JSON.stringify(sent[0]?.authorized_view)).not.toContain('outstanding_receivables');
+  });
+
   it('a context with unknown keys from the answer service is not stored', async () => {
     reply = () => answered({ semantic_model_version: 1, turn: 1, rows: [['Asha', 900]] });
     const r = await ask();

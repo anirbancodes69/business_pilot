@@ -1204,6 +1204,117 @@
           }
         }
       ]
+    },
+    {
+      "id": "ex-001",
+      "category": "example",
+      "question": "Which products have declining margins?",
+      "persona": "owner",
+      "status": "active",
+      "expected": "plan",
+      "expected_intent": "comparison",
+      "expected_plan": {
+        "measures": ["gross_margin_pct"],
+        "dimensions": [
+          {
+            "id": "product.name"
+          }
+        ],
+        "time_range": {
+          "start": "2026-10-01",
+          "end": "2026-10-31"
+        },
+        "comparison": {
+          "start": "2026-09-01",
+          "end": "2026-09-30"
+        }
+      },
+      "expected_api": "ok",
+      "notes": "PRODUCT.md example question"
+    },
+    {
+      "id": "ex-002",
+      "category": "example",
+      "question": "Which branches are performing poorly?",
+      "persona": "owner",
+      "status": "active",
+      "expected": "plan",
+      "expected_intent": "comparison",
+      "expected_plan": {
+        "measures": ["revenue"],
+        "dimensions": [
+          {
+            "id": "branch.name"
+          }
+        ],
+        "time_range": {
+          "start": "2026-10-01",
+          "end": "2026-10-31"
+        },
+        "comparison": {
+          "start": "2026-09-01",
+          "end": "2026-09-30"
+        }
+      },
+      "expected_api": "ok",
+      "notes": "PRODUCT.md example question"
+    },
+    {
+      "id": "ex-003",
+      "category": "example",
+      "question": "What are our top-selling products?",
+      "persona": "owner",
+      "status": "active",
+      "expected": "plan",
+      "expected_intent": "ranking",
+      "expected_plan": {
+        "measures": ["units_sold"],
+        "dimensions": [
+          {
+            "id": "product.name"
+          }
+        ],
+        "sort": {
+          "by": "units_sold",
+          "direction": "desc"
+        }
+      },
+      "expected_api": "ok",
+      "notes": "PRODUCT.md example question; units or revenue are both reasonable, units is expected"
+    },
+    {
+      "id": "ex-004",
+      "category": "example",
+      "question": "What should management investigate this week?",
+      "persona": "owner",
+      "status": "active",
+      "expected": "attention",
+      "notes": "PRODUCT.md example question"
+    },
+    {
+      "id": "ex-005",
+      "category": "example",
+      "question": "Is there anything we should look into this month?",
+      "persona": "owner",
+      "status": "active",
+      "expected": "attention"
+    },
+    {
+      "id": "met-009",
+      "category": "metric",
+      "question": "What are our days sales outstanding this fiscal year?",
+      "persona": "owner",
+      "status": "active",
+      "expected": "plan",
+      "expected_intent": "metric",
+      "expected_plan": {
+        "measures": ["days_sales_outstanding"],
+        "time_range": {
+          "start": "2026-04-01",
+          "end": "2026-11-15"
+        }
+      },
+      "expected_api": "ok"
     }
   ]
 }

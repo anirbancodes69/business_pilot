@@ -34,6 +34,8 @@ def _plain(value: Decimal, places: int, number_format: str) -> str:
 def format_number(value: float | Decimal, unit: str | None, number_format: str = "indian") -> str:
     """Render one number. Currency uses lakh and crore words in the Indian format."""
     v = Decimal(str(value)) if not isinstance(value, Decimal) else value
+    if unit == "percentage_points":
+        return f"{_plain(v, 1, number_format)} pp"
     if unit == "percent":
         return f"{_plain(v, 1, number_format)}%"
     if unit == "currency":

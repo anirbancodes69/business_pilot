@@ -7,6 +7,9 @@ import {
   type SemanticModelDocument,
   validateSemanticModel,
 } from '../configuration/semantic-model.validator';
+import { ResultCache } from '../platform/cache/result-cache';
+import { Env_TOKEN } from '../platform/config/config.module';
+import type { Env } from '../platform/config/env';
 import { DatabaseService } from '../platform/database/database.module';
 import { rawRows } from '../platform/database/tenant-tx';
 import { type CompiledColumn, PlanRejected, compilePlan } from './compiler';
@@ -38,6 +41,8 @@ export interface FreshnessInfo {
 }
 
 export interface ExecutionResult {
+  /** True when the figures came from the exact result cache (the data was read earlier). */
+  cache_hit: boolean;
   sources: SourceInfo[];
   freshness: FreshnessInfo[];
   plan_hash: string;
@@ -48,7 +53,60 @@ export interface ExecutionResult {
 }
 
 export const STATEMENT_TIMEOUT_MS = 10_000;
+
+/** A cached value is parsed defensively: anything unexpected is a miss, never an error. */
+function parseCached(
+  text: string,
+): { result_sets: ResultSet[]; data_executed_at: string } | undefined {
+  try {
+    const v = JSON.parse(text) as { result_sets?: ResultSet[]; data_executed_at?: string };
+    return Array.isArray(v.result_sets) && typeof v.data_executed_at === 'string'
+      ? { result_sets: v.result_sets, data_executed_at: v.data_executed_at }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 export const STALE_AFTER_MS = 24 * 3_600_000;
+/** Part of every cache key: bump either to retire all cached results after a change in meaning. */
+export const CACHE_POLICY_VERSION = 1;
+export const COMPILER_VERSION = 2;
+
+/** The plan in a canonical form, so that equivalent plans share one cache entry. */
+export function normalizePlan(plan: QueryPlan): unknown {
+  const { rationale: _ignored, ...rest } = plan;
+  void _ignored;
+  return {
+    ...rest,
+    measures: [...rest.measures].sort(),
+    filters: (rest.filters ?? [])
+      .map((f) => ({ ...f, values: [...f.values].sort() }))
+      .sort((a, b) => canonicalJson(a).localeCompare(canonicalJson(b))),
+  };
+}
+
+/** Plans that touch fields tagged pii or sensitive are never cached (docs/ai/caching.md, Exclusions). */
+export function touchesSensitiveFields(model: SemanticModelDocument, plan: QueryPlan): boolean {
+  const measureIds = new Set<string>();
+  const addMeasure = (id: string | undefined): void => {
+    if (!id || measureIds.has(id)) return;
+    measureIds.add(id);
+    const m = model.measures.find((x) => x.id === id);
+    addMeasure(m?.numerator);
+    addMeasure(m?.denominator);
+  };
+  plan.measures.forEach(addMeasure);
+  const dimIds = new Set([
+    ...(plan.dimensions ?? []).map((d) => d.id),
+    ...(plan.filters ?? []).map((f) => f.dimension),
+  ]);
+  const flagged = (tags: readonly string[] | undefined): boolean =>
+    (tags ?? []).some((t) => t === 'pii' || t === 'sensitive');
+  return (
+    [...measureIds].some((id) => flagged(model.measures.find((m) => m.id === id)?.tags)) ||
+    [...dimIds].some((id) => flagged(model.dimensions.find((d) => d.id === id)?.tags))
+  );
+}
 
 /** A dataset has no single id of its own (its key is source and entity), so one is derived. */
 function datasetId(tenantId: string, sourceId: string, entity: string): string {
@@ -68,6 +126,8 @@ export class PlanExecutor {
     @Inject(DatabaseService) private readonly db: DatabaseService,
     @Inject(AuthorizationService) private readonly authz: AuthorizationService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(ResultCache) private readonly cache: ResultCache,
+    @Inject(Env_TOKEN) private readonly env: Pick<Env, 'RESULT_CACHE_TTL_SECONDS'>,
   ) {}
 
   async execute(input: {
@@ -112,6 +172,7 @@ export class PlanExecutor {
         measures: plan.measures,
         dimensions: (plan.dimensions ?? []).map((d) => d.id),
         row_counts: result.result_sets.map((r) => r.row_count),
+        cache_hit: result.cache_hit,
       });
       return result;
     } catch (e) {
@@ -135,6 +196,42 @@ export class PlanExecutor {
       now,
     );
     const queries = compilePlan({ plan, model, ctx, asOf });
+    const entities = [...new Set(queries.flatMap((q) => q.entities))];
+    const prov = await this.provenance(ctx.tenant_id, entities, now);
+
+    // Exact result cache. Authorization has already been re-checked above: a hit never skips it. The
+    // key names everything the figures depend on, so a change in any of them makes a new key.
+    const cacheable =
+      !prov.live && !touchesSensitiveFields(model, plan) && this.env.RESULT_CACHE_TTL_SECONDS > 0;
+    const hash = createHash('sha256')
+      .update(
+        canonicalJson({
+          policy: CACHE_POLICY_VERSION,
+          compiler: COMPILER_VERSION,
+          tenant: ctx.tenant_id,
+          scope: ctx.authz_scope_hash,
+          plan: normalizePlan(plan),
+          model: model.version,
+          datasets: prov.versions,
+          as_of: asOf,
+        }),
+      )
+      .digest('hex');
+    if (cacheable) {
+      const hit = await this.cache.get(ctx.tenant_id, hash);
+      const parsed = hit ? parseCached(hit) : undefined;
+      if (parsed)
+        return {
+          cache_hit: true,
+          sources: prov.sources,
+          freshness: prov.freshness,
+          plan_hash: planHash,
+          semantic_model_version: model.version,
+          data_executed_at: parsed.data_executed_at,
+          result_sets: parsed.result_sets,
+          truncated: parsed.result_sets.some((r) => r.truncated),
+        };
+    }
     try {
       const result_sets = await this.db.tenantTx(
         ctx.tenant_id,
@@ -160,14 +257,20 @@ export class PlanExecutor {
         },
         { readOnly: true, statementTimeoutMs: STATEMENT_TIMEOUT_MS },
       );
-      const entities = [...new Set(queries.flatMap((q) => q.entities))];
-      const { sources, freshness } = await this.provenance(ctx.tenant_id, entities, now);
+      const executedAt = now.toISOString();
+      if (cacheable) {
+        // Only a successful, validated execution is stored. Too-large results are simply not cached.
+        const value = JSON.stringify({ result_sets, data_executed_at: executedAt });
+        if (value.length <= this.cache.maxValueLength)
+          await this.cache.set(ctx.tenant_id, hash, value, this.env.RESULT_CACHE_TTL_SECONDS);
+      }
       return {
-        sources,
-        freshness,
+        cache_hit: false,
+        sources: prov.sources,
+        freshness: prov.freshness,
         plan_hash: planHash,
         semantic_model_version: model.version,
-        data_executed_at: now.toISOString(),
+        data_executed_at: executedAt,
         result_sets,
         truncated: result_sets.some((r) => r.truncated),
       };
@@ -182,7 +285,14 @@ export class PlanExecutor {
     tenantId: string,
     entities: string[],
     now: Date,
-  ): Promise<{ sources: SourceInfo[]; freshness: FreshnessInfo[] }> {
+  ): Promise<{
+    sources: SourceInfo[];
+    freshness: FreshnessInfo[];
+    /** `dataset_id:data_version` of every dataset read: a sync that changes data changes the key. */
+    versions: string[];
+    /** True when a live (federated) source is involved: such results are not cached. */
+    live: boolean;
+  }> {
     const rows = await this.db.tenantTx(tenantId, (tx) =>
       tx
         .selectFrom('core.dataset as d')
@@ -194,6 +304,7 @@ export class PlanExecutor {
           'd.canonical_entity',
           'd.status',
           'd.last_successful_sync_at',
+          'd.data_version',
           's.name',
           's.access_mode',
         ])
@@ -203,6 +314,12 @@ export class PlanExecutor {
         .execute(),
     );
     return {
+      versions: rows
+        .map(
+          (r) => `${datasetId(tenantId, r.data_source_id, r.canonical_entity)}:${r.data_version}`,
+        )
+        .sort(),
+      live: rows.some((r) => r.access_mode === 'live_federated'),
       sources: rows.map((r) => ({
         data_source_id: r.data_source_id,
         data_source_name: r.name,

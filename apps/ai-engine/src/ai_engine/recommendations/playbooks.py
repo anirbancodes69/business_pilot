@@ -169,6 +169,25 @@ def for_customer_ranking(
     ]
 
 
+def for_member_changes(changes: Any) -> list[Recommendation]:
+    """The member whose change is worst, when it is a move in the wrong direction."""
+    m = changes.measure
+    if m.polarity not in ("higher_is_better", "lower_is_better") or not changes.members:
+        return []
+    worst = changes.members[0]
+    wrong = worst.delta < 0 if m.polarity == "higher_is_better" else worst.delta > 0
+    if not wrong:
+        return []
+    return [
+        Recommendation(
+            f"{worst.label} moved the wrong way the most ({worst.change.display}). Ask "
+            f"\u201cWhy did {_lower(m.label)} change for {worst.label}?\u201d to find out why.",
+            "worst_member_investigate",
+            (worst.change.id,),
+        )
+    ]
+
+
 def for_investigation(
     findings: Findings, view: AuthorizedView, measure_id: str
 ) -> list[Recommendation]:
@@ -212,7 +231,9 @@ def for_investigation(
     return out
 
 
-def recommend(candidates: list[Recommendation]) -> list[Recommendation]:
+def recommend(
+    candidates: list[Recommendation], limit: int = MAX_RECOMMENDATIONS
+) -> list[Recommendation]:
     """At most two, each with evidence, without repeats. A recommendation without a citation is
     dropped: that is the rule of D-23, enforced here rather than trusted to any playbook."""
     seen: set[str] = set()
@@ -222,4 +243,4 @@ def recommend(candidates: list[Recommendation]) -> list[Recommendation]:
             continue
         seen.add(r.playbook_id)
         out.append(r)
-    return out[:MAX_RECOMMENDATIONS]
+    return out[:limit]

@@ -92,7 +92,7 @@ def explain(
                     prompt=prompt,
                     role="explainer",
                     json_output=True,
-                    max_output_tokens=900,
+                    max_output_tokens=2000,
                 )
             )
         except LlmError as e:

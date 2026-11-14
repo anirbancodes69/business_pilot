@@ -85,8 +85,9 @@ class RawPlan(_Strict):
 
 
 class PlannerReply(_Strict):
-    outcome: Literal["plan", "clarify", "out_of_scope"]
+    outcome: Literal["plan", "clarify", "out_of_scope", "attention"]
     plan: RawPlan | None = None
+    period: RawTimeRange | None = None
     clarification_question: str | None = Field(default=None, max_length=300)
 
 
@@ -156,6 +157,13 @@ def _resolve(r: RawTimeRange, now: datetime, fiscal: int) -> dict[str, Any]:
     if r.time_dimension:
         out["time_dimension"] = r.time_dimension
     return out
+
+
+def resolve_period(raw: RawTimeRange | None, view: AuthorizedView, now: datetime) -> dict[str, Any]:
+    """The period of an attention question as absolute dates (this week so far, by default)."""
+    return _resolve(
+        raw or RawTimeRange(relative="this_week"), now, view.tenant_settings.fiscal_year_start_month
+    )
 
 
 def to_query_plan(plan: RawPlan, view: AuthorizedView, now: datetime) -> dict[str, Any]:

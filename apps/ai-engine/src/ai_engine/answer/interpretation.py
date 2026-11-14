@@ -25,7 +25,7 @@ def _day(iso: str) -> str:
     return f"{d.day} {d:%b %Y}"
 
 
-def _range(r: dict[str, Any]) -> str:
+def describe_range(r: dict[str, Any]) -> str:
     start, end = r["start"], r["end"]
     return _day(start) if start == end else f"{_day(start)} to {_day(end)}"
 
@@ -39,7 +39,7 @@ def interpret(plan: dict[str, Any], view: AuthorizedView) -> str:
         dims.append(f"{labels.get(d['id'], d['id'])}{grain}")
     if dims:
         head += " by " + ", ".join(dims)
-    parts = [head, _range(plan["time_range"])]
+    parts = [head, describe_range(plan["time_range"])]
     for f in plan.get("filters", []):
         op = {"eq": "is", "in": "is one of", "neq": "is not", "not_in": "is not one of"}.get(
             f["operator"], f["operator"]
@@ -49,7 +49,7 @@ def interpret(plan: dict[str, Any], view: AuthorizedView) -> str:
         )
     cmp_range = (plan.get("comparison") or {}).get("time_range")
     if cmp_range:
-        parts.append(f"compared with {_range(cmp_range)}")
+        parts.append(f"compared with {describe_range(cmp_range)}")
     if plan.get("limit") and plan.get("dimensions"):
         parts.append(f"top {plan['limit']}")
     return " · ".join(parts)[:400]

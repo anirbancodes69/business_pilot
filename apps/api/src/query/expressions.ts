@@ -11,6 +11,8 @@ export interface ExpressionContext {
   param: (value: unknown, cast?: string) => string;
   /** Placeholder for today's date (a bound `date` parameter). */
   asOf: () => string;
+  /** Days in the query's time range, inclusive. Throws if the range is not absolute. */
+  periodDays: () => number;
 }
 
 export interface CustomExpression {
@@ -24,6 +26,14 @@ const allocated = `COALESCE((SELECT SUM(a.amount) FROM analytics.payment_allocat
   WHERE a.tenant_id = b.tenant_id AND a.invoice_id = b.id AND a.deleted_at IS NULL), 0)`;
 
 export const CUSTOM_EXPRESSIONS: Record<string, CustomExpression> = {
+  // Days sales outstanding: what is still owed, as days of sales over the period. Needs the period's
+  // length, so it is only defined for an absolute time range.
+  days_sales_outstanding: {
+    entity: 'invoice',
+    columns: ['net_amount', 'id'],
+    build: (cx) =>
+      `SUM(b.net_amount - ${allocated}) / NULLIF(SUM(b.net_amount), 0) * ${cx.param(cx.periodDays(), 'integer')}`,
+  },
   gross_margin: {
     entity: 'invoice_line',
     columns: ['net_amount', 'cost_amount'],

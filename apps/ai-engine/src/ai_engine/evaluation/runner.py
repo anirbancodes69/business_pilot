@@ -59,11 +59,10 @@ class ReplayProvider:
         if c.expected == "followup":
             first = (c.turns or [{}])[0]
             return self._reply(plan_reply(first["expected_plan"], first.get("expected_intent")))
-        if c.expected == "clarify":
-            reply: dict[str, Any] = {
-                "outcome": "clarify",
-                "clarification_question": "Which period?",
-            }
+        if c.expected == "attention":
+            reply: dict[str, Any] = {"outcome": "attention", "period": {"relative": "this_week"}}
+        elif c.expected == "clarify":
+            reply = {"outcome": "clarify", "clarification_question": "Which period?"}
         elif c.expected == "out_of_scope" or c.planner_expected == "no_plan":
             reply = {"outcome": "out_of_scope"}
         else:
@@ -131,7 +130,11 @@ def evaluate_case(case: Case, now: datetime, provider: LlmProvider) -> CaseResul
         provider.case = case
     out = plan_question(case.question or "", view, now, provider)
     problems: list[str] = []
-    if case.planner_expected == "no_plan" or case.expected in ("clarify", "out_of_scope"):
+    if case.expected == "attention":
+        ok = out.kind == "attention"
+        intent_ok = None
+        problems = [] if ok else [f"wanted an attention briefing, got {out.kind}"]
+    elif case.planner_expected == "no_plan" or case.expected in ("clarify", "out_of_scope"):
         # A case that names its refusal must get exactly that; a persona that simply cannot see the
         # data (planner_expected = no_plan) may be refused or asked to clarify, never given a plan.
         want = case.expected if case.expected != "plan" else None

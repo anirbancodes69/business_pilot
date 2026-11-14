@@ -224,7 +224,7 @@ def classify(
                 prompt=build_prompt(question, focus, view, now),
                 role="planner",
                 json_output=True,
-                max_output_tokens=400,
+                max_output_tokens=1200,
             )
         )
     except LlmError:

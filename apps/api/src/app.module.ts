@@ -7,6 +7,7 @@ import { ConfigurationModule } from './configuration/configuration.module';
 import { MappingModule } from './mapping/mapping.module';
 import { HealthModule } from './health/health.module';
 import { AiEngineModule } from './platform/ai-engine/ai-engine.module';
+import { CacheModule } from './platform/cache/result-cache';
 import { ConfigModule } from './platform/config/config.module';
 import { TenancyModule } from './tenancy/tenancy.module';
 import { CryptoModule } from './platform/crypto/crypto.module';
@@ -18,6 +19,7 @@ import { requestIdMiddleware } from './platform/request-id/request-id';
   imports: [
     ConfigModule,
     DatabaseModule,
+    CacheModule,
     CryptoModule,
     ObjectStorageModule,
     AiEngineModule,

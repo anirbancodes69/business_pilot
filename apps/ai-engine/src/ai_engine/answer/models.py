@@ -46,6 +46,7 @@ class ToolResult(BaseModel):
     data_executed_at: str
     result_sets: list[ToolResultSet]
     truncated: bool = False
+    cache_hit: bool = False
     sources: list[dict[str, Any]] = []
     freshness: list[dict[str, Any]] = []
 

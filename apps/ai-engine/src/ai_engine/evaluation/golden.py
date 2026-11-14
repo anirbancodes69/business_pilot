@@ -20,7 +20,7 @@ class Case(_Loose):
     status: Literal["active", "pending"] = "active"
     persona: str = "owner"
     question: str | None = None
-    expected: Literal["plan", "clarify", "out_of_scope", "followup"] = "plan"
+    expected: Literal["plan", "clarify", "out_of_scope", "followup", "attention"] = "plan"
     planner_expected: Literal["plan", "no_plan"] = "plan"
     expected_intent: str | None = None
     expected_plan: dict[str, Any] | None = None

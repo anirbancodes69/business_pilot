@@ -41,6 +41,8 @@ const BASE: Record<string, 'invoice' | 'line' | 'payment'> = {
   average_order_value: 'invoice',
   outstanding_receivables: 'invoice',
   overdue_receivables: 'invoice',
+  days_sales_outstanding: 'invoice',
+  gross_margin_pct: 'line',
   units_sold: 'line',
   line_revenue: 'line',
   gross_margin: 'line',
@@ -167,6 +169,16 @@ export function oracle(
           : null;
       case 'outstanding_receivables':
         return sum(fs, (f) => outstanding(f.invoice as SyntheticRow));
+      case 'days_sales_outstanding': {
+        const revenue = sum(fs, (f) => num(f.invoice?.net_amount));
+        const owed = sum(fs, (f) => outstanding(f.invoice as SyntheticRow));
+        const days =
+          (Date.parse(`${plan.time_range.end}T00:00:00Z`) -
+            Date.parse(`${plan.time_range.start}T00:00:00Z`)) /
+            86_400_000 +
+          1;
+        return revenue ? ((owed as number) / revenue) * days : null;
+      }
       case 'overdue_receivables': {
         const late = fs.filter((f) => (f.invoice?.due_date as string) < opts.asOf);
         return sum(late, (f) => outstanding(f.invoice as SyntheticRow));
@@ -177,6 +189,11 @@ export function oracle(
         return sum(fs, (f) => num(f.line?.net_amount));
       case 'gross_margin':
         return sum(fs, (f) => num(f.line?.net_amount) - num(f.line?.cost_amount));
+      case 'gross_margin_pct': {
+        const revenue = sum(fs, (f) => num(f.line?.net_amount));
+        const margin = sum(fs, (f) => num(f.line?.net_amount) - num(f.line?.cost_amount));
+        return revenue ? ((margin as number) / revenue) * 100 : null;
+      }
       case 'payments_received':
         return sum(fs, (f) => num(f.payment?.amount));
       default:

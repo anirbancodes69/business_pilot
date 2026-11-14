@@ -9,6 +9,7 @@ import {
 } from '../../src/configuration/templates/wholesale-distribution';
 import { rawRows } from '../../src/platform/database/tenant-tx';
 import { PlanRejected } from '../../src/query/compiler';
+import { NullResultCache } from '../../src/platform/cache/result-cache';
 import { ContextRejected, PlanExecutor } from '../../src/query/plan-executor';
 import type { QueryPlan } from '../../src/query/query-plan';
 import { createFixture, type Fixture } from './harness';
@@ -24,7 +25,9 @@ const id = { b1: randomUUID(), b2: randomUUID() };
 
 beforeAll(async () => {
   f = await createFixture();
-  executor = new PlanExecutor(f.db, authz, new AuditService());
+  executor = new PlanExecutor(f.db, authz, new AuditService(), new NullResultCache(), {
+    RESULT_CACHE_TTL_SECONDS: 60,
+  });
   const model = wholesaleDistributionTemplate();
   const policy = wholesaleDistributionPolicy();
   const ds = randomUUID();

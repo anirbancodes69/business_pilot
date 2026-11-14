@@ -170,6 +170,20 @@ describe('plan compiler', () => {
     expect(od?.sql).toContain('b.due_date <');
   });
 
+  it('expresses a ratio whose unit is percent in percent, not as a fraction', () => {
+    const [m] = compile(plan({ measures: ['gross_margin_pct'], dimensions: [], sort: [] }));
+    expect(m?.sql).toContain('NULLIF(SUM(b."net_amount"), 0) * 100');
+    // a ratio in another unit is left alone
+    const [aov] = compile(plan({ measures: ['average_order_value'], dimensions: [], sort: [] }));
+    expect(aov?.sql).not.toContain('* 100');
+  });
+
+  it('compiles days sales outstanding from the length of the period', () => {
+    const [c] = compile(plan({ measures: ['days_sales_outstanding'], dimensions: [], sort: [] }));
+    expect(c?.sql).toContain('NULLIF(SUM(b.net_amount), 0) * $');
+    expect(c?.params).toContain(183); // 2026-04-01 to 2026-09-30, inclusive
+  });
+
   it('checks filter value types and operators', () => {
     const bad = (f: QueryPlan['filters']) => rejection(() => compile(plan({ filters: f })))?.kind;
     expect(bad([{ dimension: 'customer.name', operator: 'gt', values: ['a'] }])).toBe('invalid');

@@ -6,6 +6,7 @@ import { AuthorizationService } from '../../src/authorization/authorization.serv
 import { seedSynthetic } from '../../src/dev/seed-synthetic';
 import { syntheticDistributor } from '../../src/dev/synthetic-distributor';
 import { PlanRejected } from '../../src/query/compiler';
+import { NullResultCache } from '../../src/platform/cache/result-cache';
 import { type ExecutionResult, PlanExecutor } from '../../src/query/plan-executor';
 import type { QueryPlan } from '../../src/query/query-plan';
 import { oracle } from '../golden/oracle';
@@ -59,7 +60,9 @@ const pune = data.branch.find((b) => b.name === 'Pune')?.id as string;
 
 beforeAll(async () => {
   f = await createFixture();
-  executor = new PlanExecutor(f.db, authz, new AuditService());
+  executor = new PlanExecutor(f.db, authz, new AuditService(), new NullResultCache(), {
+    RESULT_CACHE_TTL_SECONDS: 60,
+  });
   await f.db.tenantTx(f.A.tenantId, (tx) => seedSynthetic(tx, f.A.tenantId, data));
   await f.db.tenantTx(f.A.tenantId, async (tx) => {
     const role = await tx

@@ -13,7 +13,7 @@ def test_the_golden_set_is_valid_for_every_persona_view() -> None:
     results, pending = run(suite, ReplayProvider())
     failed = {r.id: r.problems for r in results if not r.ok}
     assert failed == {}
-    assert len(results) >= 50 and pending == 2
+    assert len(results) >= 55 and pending == 2
     cats = {r.category for r in results}
     assert {
         "metric",
@@ -25,6 +25,7 @@ def test_the_golden_set_is_valid_for_every_persona_view() -> None:
         "out_of_scope",
         "adversarial",
         "followup",
+        "example",
     } <= cats
     # nothing needed a repair; a follow-up case plans its first turn and classifies its second
     assert all(r.llm_calls == (2 if r.category == "followup" else 1) for r in results)

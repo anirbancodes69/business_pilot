@@ -56,7 +56,7 @@ def test_happy_path_renders_numbers_from_the_ledger_only() -> None:
     assert r.summary == "Asha Traders owes the most, ₹9.00 lakh."
     assert r.verified_facts[0]["statement"] == "Top: ₹9.00 lakh"
     assert r.execution["grounding"] == "passed" and r.execution["tool_calls"] == 1
-    assert r.execution["prompt_versions"] == {"planner": "planner-v5", "explainer": "explainer-v2"}
+    assert r.execution["prompt_versions"] == {"planner": "planner-v6", "explainer": "explainer-v2"}
     # usage is counted for metering: counts only, one planner and one explainer call
     assert r.execution["usage"] == {
         "planner": {"calls": 1, "input_tokens": 100, "output_tokens": 20},
@@ -276,3 +276,14 @@ def test_sources_and_freshness_from_the_api_reach_the_answer() -> None:
     result.freshness = [{"dataset_id": "d1", "as_of": "2026-11-15T02:30:00Z", "stale": False}]
     r = answer_question(request(), RID, Scripted(GOOD, good_explainer), FakeTools(result))
     assert r.sources == result.sources and r.freshness == result.freshness
+
+
+def test_exact_cache_hits_are_reported_in_the_execution_record() -> None:
+    cold = answer_question(
+        request(), RID, Scripted(GOOD, good_explainer), FakeTools(tool_result(ROWS))
+    )
+    assert cold.execution["cache"] == {"exact_result_hits": 0}
+    warm_result = tool_result(ROWS)
+    warm_result.cache_hit = True
+    warm = answer_question(request(), RID, Scripted(GOOD, good_explainer), FakeTools(warm_result))
+    assert warm.execution["cache"] == {"exact_result_hits": 1}
