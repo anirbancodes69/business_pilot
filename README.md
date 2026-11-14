@@ -4,7 +4,43 @@ BusinessPilot is an **AI Business Analyst**: a configuration-driven, multi-tenan
 
 It is **not** a chatbot over uploaded documents, and not merely natural-language-to-SQL. Every number in an answer must come from a structured query result or a deterministic calculation on one.
 
-> **Status: Milestone 1 (repository foundation) is complete.** Only skeletons, health endpoints and infrastructure exist. No product feature is implemented. See [CURRENT.md](CURRENT.md) for what has actually been built.
+> **Status: foundation built, product not yet usable.** Milestones 1 to 4 are merged to `main`. Milestone 4 exists at API level only. There is no user interface, no data sync and no AI answer pipeline yet, so nobody can ask a question today. [CURRENT.md](CURRENT.md) is the source of truth for what exists.
+
+## What exists today
+
+| Milestone | Scope | State |
+|---|---|---|
+| 1 | Repository, three app skeletons, Docker Compose stack, CI, tracing | Merged |
+| 2 | Tenants, login token verification, roles and permissions, Row-Level Security, audit log, credential encryption | Merged |
+| 3 | Semantic model versions, the wholesale distribution template, access policies, the authorized view | Merged |
+| 4 | Connector framework, PostgreSQL and Excel connectors, human approval of objects, mapping workflow | Merged, API only |
+| 5 | Sync engine | Not started |
+| 6 | AI pipeline: query plans, SQL compiler, grounded answers, investigation, chat UI | Not started |
+| 7 to 10 | Retrieval, caching, onboarding, pilot | Not started |
+
+What that means in practice:
+
+- **Works, through the API:** a tenant admin can publish a semantic model, activate an access policy, connect a PostgreSQL database or upload an Excel file, see the discovered schema, and review, approve and activate a mapping.
+- **Enforced and tested:** one tenant cannot read or change another tenant's data. This is checked by an isolation test suite that runs against a real PostgreSQL.
+- **Not built:** loading customer data into the analytical tables, asking questions, any AI call (the LLM provider is a stand-in that calls no model), and every screen.
+- **Not chosen yet:** the LLM provider, the identity provider and the object storage product. Uploaded files are held in memory and are lost on restart.
+
+Milestone definitions and acceptance criteria are in [ROADMAP.md](ROADMAP.md).
+
+## Quick start
+
+Needs Docker with Compose v2, Node.js 24, pnpm and [uv](https://docs.astral.sh/uv/). Full instructions are in [DEVELOPMENT.md](DEVELOPMENT.md).
+
+```bash
+./scripts/setup-local-env.sh     # creates .env with random local secrets; never overwrites an existing one
+pnpm install
+uv sync --directory apps/ai-engine
+pnpm stack:up                    # builds and starts all services
+pnpm check                       # lint, type-check and unit tests
+pnpm test:isolation              # tenant isolation suite; needs the postgres service running
+```
+
+Signing in needs an OIDC provider configured in `.env`. Without one, every authenticated route returns 401.
 
 ## Who it is for
 
@@ -31,18 +67,18 @@ The first market is Indian SMEs and mid-sized businesses (20–200 employees). T
 
 ```
 apps/
-  web/            Next.js frontend (not started)
-  api/            NestJS modular monolith: HTTP API process + worker process (not started)
-  ai-engine/      Python + FastAPI AI orchestration service (not started)
+  web/            Next.js frontend (app shell only)
+  api/            NestJS modular monolith: HTTP API process + worker process (M1 to M4 at API level; worker has no jobs yet)
+  ai-engine/      Python + FastAPI AI orchestration service (health endpoint and a dummy LLM port only)
 packages/
   shared-types/   TypeScript types shared by web and api (not started)
   config-schema/  Validators generated from /schemas (not started)
   api-contracts/  OpenAPI specs and generated clients (not started)
 contracts/        Interface contracts between components (connector, tenant, semantic model, AI)
 schemas/          JSON Schemas for configuration documents (the source of truth for config)
-infrastructure/   Docker, PostgreSQL, Redis and monitoring setup (not started)
+infrastructure/   Docker Compose stack, PostgreSQL role setup, Redis and monitoring notes
 docs/             Architecture, data, AI and security designs, plus ADRs
-.github/workflows/ CI definition (documentation and schema checks only; not yet run)
+.github/workflows/ CI: docs and schema checks, lint, type-check, tests, tenant isolation suite, secret scan, dependency audit, Compose smoke test
 ```
 
 ## Licensing and provenance

@@ -1,6 +1,6 @@
 # CI — documentation and contract checks, lint/type-check/tests for all apps, secret scanning,
 # dependency audit and a Docker Compose smoke test.
-# The tenant isolation suite (docs/security/tenant-isolation-tests.md) is added in Milestone 2.
+# The tenant isolation suite (docs/security/tenant-isolation-tests.md) runs in the tenant-isolation job.
 name: ci
 
 on:
@@ -97,7 +97,7 @@ jobs:
         run: |
           ./scripts/setup-local-env.sh
           docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --wait postgres
-      - name: Tenant isolation tests (TI-01 to TI-05, TI-15)
+      - name: Tenant isolation tests
         run: pnpm test:isolation
       - name: Logs on failure
         if: failure()

@@ -4,7 +4,7 @@ Ordering principle: reach a **working vertical slice** fast. The slice is one pi
 
 Where a later milestone's items are needed by the slice, a thin version is pulled forward, and each milestone says what it defers.
 
-Status of every milestone: Milestone 1 **Completed** (merged 2026-11-11, PR #1); Milestone 2 **Implemented on branch `feature/m2-tenant-security`, pending review** (see [CURRENT.md](CURRENT.md)); all others **Not started** (see [CURRENT.md](CURRENT.md)).
+Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestones 5 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
 
 ---
 
@@ -60,6 +60,7 @@ Status of every milestone: Milestone 1 **Completed** (merged 2026-11-11, PR #1);
 - E4.0 Make a provisional D-OPEN-01 choice (LLM provider behind the `LlmProvider` port). It is confirmed in E6.1.
 - E4.4 AI-assisted mapping suggestion (a thin call into ai-engine, metadata only) and a human approval UI. Name-similarity heuristics are the fallback when the LLM is unavailable.
 - **Deferred:** Google Sheets (end of M5 or M9), MySQL and MongoDB (after M6), private connector agent (D-OPEN-08).
+- **Deferred from this milestone (2026-11-14):** E4.0 was replaced by a dummy provider behind the port ([ADR-0015](docs/adr/ADR-0015-dummy-llm-and-object-storage-adapters.md)); the real choice moves to E6.1. In E4.4 only the name-similarity heuristics and the approval workflow (API) were built: the ai-engine call waits for a real provider, and the approval UI moves to M9 (E9.1).
 
 **Depends on:** M3.
 **Acceptance:** a user uploads an Excel file or connects PostgreSQL, sees the discovered schema, reviews suggested mappings, and approves them. Credentials are never returned or logged.

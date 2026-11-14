@@ -1,6 +1,6 @@
 # DATA_CONNECTIVITY.md — Connectors, storage and synchronization
 
-Nothing here is implemented yet. Details: [docs/data/connector-capabilities.md](docs/data/connector-capabilities.md), [docs/data/canonical-model.md](docs/data/canonical-model.md), [docs/data/sync-engine.md](docs/data/sync-engine.md). Contract: [contracts/connector/](contracts/connector/).
+This is the target design. Built so far (Milestone 4, API only): the connector interface and registry, the PostgreSQL connector (test and discovery), the Excel upload connector, human approval of objects and the mapping workflow. Sync is not built. See [CURRENT.md](CURRENT.md). Details: [docs/data/connector-capabilities.md](docs/data/connector-capabilities.md), [docs/data/canonical-model.md](docs/data/canonical-model.md), [docs/data/sync-engine.md](docs/data/sync-engine.md). Contract: [contracts/connector/](contracts/connector/).
 
 ## 1. Connector framework
 
