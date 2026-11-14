@@ -141,3 +141,68 @@ def test_summary_counts_by_category() -> None:
     s = summarize(results, pending)
     assert s.by_category["metric"] == (2, 2) and s.by_category["clarify"] == (1, 1)
     assert s.plan_accuracy == 1.0
+
+
+def test_the_token_cap_stops_new_cases() -> None:
+    from ai_engine.evaluation.golden import Case as _Case  # noqa: F401
+
+    suite = load_suite()
+    ok = {
+        "outcome": "plan",
+        "plan": {
+            "intent": "metric",
+            "measures": ["revenue"],
+            "time_range": {"relative": "last_month"},
+        },
+    }
+    # Scripted costs 120 tokens per call. A cap of 200 allows two cases (the second starts at 120).
+    model = Scripted(*([ok] * 10))
+    results, _ = run(
+        suite, model, only={"met-001", "met-002", "met-003", "met-004", "met-005"}, max_tokens=200
+    )
+    assert len(results) == 2 and len(model.requests) <= 4
+
+
+def test_an_accepted_alternative_counts_as_correct() -> None:
+    now = datetime.fromisoformat(load_suite().as_of)
+    case = next(c for c in load_suite().cases if c.id == "flt-005")
+    base = {
+        "intent": "ranking",
+        "measures": ["outstanding_receivables"],
+        "dimensions": [{"id": "customer.name"}],
+        "time_range": {"relative": "last_n_days", "n": 730},
+        "sort": [{"by": "outstanding_receivables", "direction": "desc"}],
+    }
+    by_city = {
+        "outcome": "plan",
+        "plan": {
+            **base,
+            "filters": [{"dimension": "customer.city", "operator": "eq", "values": ["Nagpur"]}],
+        },
+    }
+    by_branch = {
+        "outcome": "plan",
+        "plan": {
+            **base,
+            "filters": [{"dimension": "branch.name", "operator": "eq", "values": ["Nagpur"]}],
+        },
+    }
+    wrong = {
+        "outcome": "plan",
+        "plan": {
+            **base,
+            "filters": [{"dimension": "customer.city", "operator": "eq", "values": ["Pune"]}],
+        },
+    }
+    assert evaluate_case(case, now, Scripted(by_city)).ok
+    assert evaluate_case(case, now, Scripted(by_branch)).ok
+    assert not evaluate_case(case, now, Scripted(wrong)).ok
+
+
+def test_a_named_safe_outcome_counts_as_correct() -> None:
+    now = datetime.fromisoformat(load_suite().as_of)
+    case = next(c for c in load_suite().cases if c.id == "adv-001")
+    assert evaluate_case(
+        case, now, Scripted({"outcome": "clarify", "clarification_question": "?"})
+    ).ok
+    assert not evaluate_case(case, now, Scripted({"outcome": "out_of_scope"})).ok

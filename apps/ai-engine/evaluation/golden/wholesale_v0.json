@@ -748,7 +748,21 @@
      "direction": "desc"
     }
    },
-   "expected_api": "ok"
+   "expected_api": "ok",
+   "accepted_alternatives": [
+    {
+     "filters": [
+      {
+       "dimension": "customer.city",
+       "operator": "eq",
+       "values": [
+        "Nagpur"
+       ]
+      }
+     ]
+    }
+   ],
+   "notes": "Customers in Nagpur: the branch or the customer city both give the same customers in this dataset."
   },
   {
    "id": "clr-001",
@@ -821,7 +835,11 @@
     }
    },
    "expected_api": "ok",
-   "restricted_to_branch": "Pune"
+   "restricted_to_branch": "Pune",
+   "accepted_outcomes": [
+    "clarify"
+   ],
+   "notes": "A refusal to plan or a request to clarify is as safe as a plan; the api restriction is tested separately."
   },
   {
    "id": "adv-002",

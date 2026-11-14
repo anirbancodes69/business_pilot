@@ -75,10 +75,15 @@ def evaluate_case(case: Case, now: datetime, provider: LlmProvider) -> CaseResul
     else:
         ok = out.kind == "plan" and out.plan is not None
         intent_ok = None
-        if not ok:
+        if not ok and out.kind in case.accepted_outcomes:
+            ok = True
+        elif not ok:
             problems.append(f"wanted a plan, got {out.kind}: {'; '.join(out.problems)[:200]}")
         elif case.expected_plan is not None and out.plan is not None:
             problems = match_plan(case.expected_plan, out.plan)
+            for alt in case.accepted_alternatives:
+                if problems and not match_plan({**case.expected_plan, **alt}, out.plan):
+                    problems = []
             ok = not problems
             if case.expected_intent:
                 intent_ok = out.plan.get("intent") == case.expected_intent
@@ -89,6 +94,8 @@ def evaluate_case(case: Case, now: datetime, provider: LlmProvider) -> CaseResul
         ok=ok,
         intent_ok=intent_ok,
         problems=problems,
+        repaired_from=out.repaired_from,
+        actual_plan=out.plan if not ok or out.repaired_from else None,
         llm_calls=out.llm_calls,
         input_tokens=out.input_tokens,
         output_tokens=out.output_tokens,
@@ -100,10 +107,20 @@ def run(
     provider: LlmProvider,
     only: set[str] | None = None,
     limit: int | None = None,
+    max_tokens: int | None = None,
 ) -> tuple[list[CaseResult], int]:
     now = datetime.fromisoformat(suite.as_of)
     active = [c for c in suite.cases if c.status == "active" and (not only or c.id in only)]
     if limit is not None:
         active = active[:limit]
     pending = sum(c.status == "pending" for c in suite.cases)
-    return [evaluate_case(c, now, provider) for c in active], pending
+    results: list[CaseResult] = []
+    spent = 0
+    for c in active:
+        # A hard stop on spending: no new case starts once the budget is used up.
+        if max_tokens is not None and spent >= max_tokens:
+            break
+        r = evaluate_case(c, now, provider)
+        spent += r.input_tokens + r.output_tokens
+        results.append(r)
+    return results, pending

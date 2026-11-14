@@ -26,6 +26,12 @@ def main() -> int:
     ap.add_argument("--yes", action="store_true", help="confirm that real calls may be made")
     ap.add_argument("--only", help="comma-separated case ids")
     ap.add_argument("--limit", type=int)
+    ap.add_argument(
+        "--max-tokens",
+        type=int,
+        default=120_000,
+        help="stop starting new cases after this many tokens",
+    )
     ap.add_argument("--out", type=Path)
     args = ap.parse_args()
 
@@ -49,7 +55,9 @@ def main() -> int:
     else:
         provider = ReplayProvider()
 
-    results, pending = run(suite, provider, only, args.limit)
+    results, pending = run(
+        suite, provider, only, args.limit, args.max_tokens if args.real else None
+    )
     s = summarize(results, pending)
     mode = "REAL MODEL" if args.real else "replay (no model)"
     print(f"\nGolden set {suite.suite} · {mode}")
@@ -60,9 +68,21 @@ def main() -> int:
     if s.intent_accuracy is not None:
         print(f"  intent accuracy {s.intent_accuracy:.0%}")
     print(f"  model calls {s.llm_calls} · tokens in {s.input_tokens:,} out {s.output_tokens:,}")
+    if s.total < len(active):
+        print(f"  STOPPED by the token cap after {s.total} of {len(active)} cases")
     for r in results:
         if not r.ok:
             print(f"  FAIL {r.id}: {'; '.join(r.problems)[:240]}")
+            if r.actual_plan:
+                p = r.actual_plan
+                print(
+                    f"       got: intent={p.get('intent')} measures={p.get('measures')} "
+                    f"dims={[d['id'] for d in p.get('dimensions', [])]} "
+                    f"filters={p.get('filters')} range={p.get('time_range')}"
+                )
+    for r in results:
+        if r.repaired_from:
+            print(f"  REPAIRED {r.id}: {'; '.join(r.repaired_from)[:200]}")
     if args.out:
         args.out.write_text(
             json.dumps(

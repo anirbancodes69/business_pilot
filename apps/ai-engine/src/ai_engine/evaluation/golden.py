@@ -24,6 +24,10 @@ class Case(_Loose):
     planner_expected: Literal["plan", "no_plan"] = "plan"
     expected_intent: str | None = None
     expected_plan: dict[str, Any] | None = None
+    # Other plans that are equally correct (for example a customer's city instead of a branch).
+    accepted_alternatives: list[dict[str, Any]] = []
+    # Outcomes other than a plan that count as correct (for example asking to clarify).
+    accepted_outcomes: list[str] = []
     needs: str | None = None
     turns: list[dict[str, Any]] | None = None
 
@@ -108,6 +112,9 @@ class CaseResult(BaseModel):
     ok: bool
     intent_ok: bool | None = None
     problems: list[str] = []
+    # Diagnostics for tuning: why the first reply needed a repair, and the plan that was produced.
+    repaired_from: list[str] = []
+    actual_plan: dict[str, Any] | None = None
     llm_calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0

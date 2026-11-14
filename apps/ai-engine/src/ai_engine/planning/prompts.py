@@ -9,12 +9,15 @@ from datetime import datetime
 
 from ai_engine.planning.view import AuthorizedView
 
-PROMPT_VERSION = "planner-v2"
+PROMPT_VERSION = "planner-v3"
 MAX_QUESTION_CHARS = 1000
 
 SYSTEM = """You turn a business question into a JSON query plan. Reply with one JSON object only.
 Rules:
 - Use only the measure ids and dimension ids listed under CATALOG. Never invent ids.
+- "intent" must be exactly one of: metric (one figure, no grouping), ranking (highest or lowest items), comparison (two periods), trend (over time), diagnostic (why something changed), recommendation. No other word is valid.
+- A dimension groups the results; a filter restricts them. If the question names one specific member, such as one customer or one branch, filter on it and do not also group by that dimension.
+- A place name such as a city is usually one of the organisation's own units (for example a branch or outlet): filter on that dimension. Use a customer's location only when the question is about customers located there.
 - All measures of one plan must have the same "entity". If the question needs measures of different entities, plan the first and ask nothing else.
 - time_range is always required in a plan. If the question names no period, use {"relative":"last_n_days","n":730} for balances such as outstanding or overdue amounts, and {"relative":"this_fiscal_year"} for everything else.
 - Dates: never compute dates. Use time_range.relative with one of: today, yesterday, this_week, last_week, this_month, last_month, this_quarter, last_quarter, this_year, last_year, fiscal_ytd, this_fiscal_year, last_fiscal_year, last_n_days (with n), last_n_months (with n). Use start and end (YYYY-MM-DD) only when the user gave exact dates.
