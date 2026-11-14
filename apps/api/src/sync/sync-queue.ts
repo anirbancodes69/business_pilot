@@ -1,6 +1,7 @@
 import {
   Inject,
   Injectable,
+  Logger,
   type OnModuleDestroy,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -41,6 +42,7 @@ export const JOB_OPTIONS = {
 
 @Injectable()
 export class SyncQueue implements OnModuleDestroy {
+  private readonly log = new Logger('SyncQueue');
   private queue: Queue<SyncJob> | undefined;
 
   constructor(@Inject(Env_TOKEN) private readonly env: Env) {}
@@ -64,6 +66,20 @@ export class SyncQueue implements OnModuleDestroy {
       throw new ServiceUnavailableException('the job queue is unavailable');
     }
     return { jobId };
+  }
+
+  /**
+   * For callers whose own work already succeeded (an upload, an activation): a queue problem must
+   * not undo it. Returns whether the sync was queued. The next manual or scheduled sync catches up.
+   */
+  async enqueueQuietly(job: SyncJob): Promise<boolean> {
+    try {
+      await this.enqueue(job);
+      return true;
+    } catch {
+      this.log.warn(`could not queue a ${job.trigger} sync`);
+      return false;
+    }
   }
 
   async ping(): Promise<void> {
