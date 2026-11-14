@@ -17,6 +17,8 @@ from ai_engine.settings import Settings
 
 NOW = datetime(2026, 11, 14, 10, 0, tzinfo=timezone(timedelta(hours=5, minutes=30)))
 RID = "11111111-2222-4333-8444-555555555555"
+# An obviously fake, low-entropy value (a real-looking one trips secret scanners).
+FAKE_SERVICE_TOKEN = "a" * 24
 
 
 def request(question: str = "Which customers have the highest dues?") -> AnswerRequest:
@@ -216,13 +218,11 @@ def test_api_tool_client_maps_statuses_and_sends_credentials() -> None:
         (500, "failed"),
     ):
         seen["code"] = code
-        tools = ApiTools(
-            "http://api", "tok-0123456789abcdef", transport=httpx.MockTransport(handler)
-        )
+        tools = ApiTools("http://api", FAKE_SERVICE_TOKEN, transport=httpx.MockTransport(handler))
         with pytest.raises(ToolError) as e:
             tools.execute_plan("ctx", RID, {"a": 1})
         assert e.value.kind == kind
-    assert seen["auth"] == "Bearer tok-0123456789abcdef" and seen["rid"] == RID
+    assert seen["auth"] == f"Bearer {FAKE_SERVICE_TOKEN}" and seen["rid"] == RID
     assert seen["body"] == {"request_context": "ctx", "plan": {"a": 1}}
 
 
@@ -245,7 +245,7 @@ def _body() -> dict[str, Any]:
 
 
 def test_the_answer_endpoint_needs_the_service_token_and_fails_closed() -> None:
-    token = "service-token-0123456789"
+    token = FAKE_SERVICE_TOKEN * 2
     ok = _client(token).post(
         "/internal/v1/answer", json=_body(), headers={"authorization": f"Bearer {token}"}
     )
