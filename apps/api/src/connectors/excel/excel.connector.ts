@@ -11,6 +11,7 @@ import {
   type DiscoveredObject,
   type DiscoveredSchema,
   SchemaError,
+  type SourceRow,
 } from '../connector';
 import { assertSafeXlsx, MAX_UPLOAD_BYTES } from './zip-guard';
 
@@ -72,7 +73,8 @@ function inferType(values: Cell[]): string {
   return 'text';
 }
 
-function describeSheet(name: string, rows: Cell[][]): DiscoveredObject | null {
+/** The header names and the non-empty body rows of a sheet, or null for an empty sheet. */
+function tableOf(rows: Cell[][]): { names: string[]; body: Cell[][] } | null {
   const start = rows.findIndex((r) => r.some((c) => !isEmpty(c)));
   if (start < 0) return null;
   const headerRow = rows[start] as Cell[];
@@ -83,6 +85,13 @@ function describeSheet(name: string, rows: Cell[][]): DiscoveredObject | null {
   const names = headerNames(headerRow.slice(0, width));
   const body = rows.slice(start + 1).filter((r) => r.some((c) => !isEmpty(c)));
   if (body.length > MAX_ROWS) throw new SchemaError('a sheet has too many rows');
+  return { names, body };
+}
+
+function describeSheet(name: string, rows: Cell[][]): DiscoveredObject | null {
+  const table = tableOf(rows);
+  if (!table) return null;
+  const { names, body } = table;
 
   const fields: DiscoveredField[] = [];
   const keyCandidates: string[] = [];
@@ -151,7 +160,7 @@ export class ExcelConnector implements Connector {
     return { ok: true, errors: [], privilege_warnings: [] };
   }
 
-  async discoverSchema(ctx: ConnectorCallContext): Promise<DiscoveredSchema> {
+  private async sheets(ctx: ConnectorCallContext): Promise<{ sheet: string; data: Cell[][] }[]> {
     const file = await this.load(ctx);
     if (!file) throw new SchemaError('no file has been uploaded');
     assertSafeXlsx(file);
@@ -163,6 +172,35 @@ export class ExcelConnector implements Connector {
       throw new SchemaError('the workbook could not be read');
     }
     if (sheets.length > MAX_SHEETS) throw new SchemaError('the workbook has too many sheets');
+    return sheets;
+  }
+
+  async readSnapshot(
+    ctx: ConnectorCallContext,
+    object: string,
+    columns: string[],
+    batchSize: number,
+    onBatch: (rows: SourceRow[]) => Promise<void>,
+  ): Promise<void> {
+    const sheet = (await this.sheets(ctx)).find((s) => s.sheet.slice(0, 120) === object);
+    const table = sheet ? tableOf(sheet.data) : null;
+    if (!table) throw new SchemaError('the object is no longer in the file');
+    const index = columns.map((c) => table.names.indexOf(c));
+    if (index.some((i) => i < 0)) throw new SchemaError('a mapped column is no longer in the file');
+    for (let at = 0; at < table.body.length; at += batchSize) {
+      const rows = table.body.slice(at, at + batchSize).map((r) => {
+        const row: SourceRow = {};
+        columns.forEach((c, k) => {
+          row[c] = r[index[k] as number];
+        });
+        return row;
+      });
+      await onBatch(rows);
+    }
+  }
+
+  async discoverSchema(ctx: ConnectorCallContext): Promise<DiscoveredSchema> {
+    const sheets = await this.sheets(ctx);
     const objects = sheets
       .map((s) => describeSheet(s.sheet, s.data))
       .filter((o): o is DiscoveredObject => o !== null);

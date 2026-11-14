@@ -13,6 +13,14 @@ const schema = z.object({
   POSTGRES_APP_PASSWORD: z.string().min(1),
   POSTGRES_OWNER_USER: z.string().default('bp_owner'),
   POSTGRES_OWNER_PASSWORD: z.string().optional(),
+  // Job queue (BullMQ on Redis). Unset = no jobs can be queued: sync requests then fail closed.
+  REDIS_URL: z.string().url().optional(),
+  REDIS_PASSWORD: z.string().min(1).optional(),
+  // Only tests change this, so that a test queue never competes with a running worker.
+  SYNC_QUEUE_NAME: z
+    .string()
+    .regex(/^[a-z][a-z0-9_]*$/)
+    .default('sync'),
   // Authentication (D-OPEN-03). Unset = every authenticated route is rejected (fail closed).
   OIDC_ISSUER_URL: z.string().url().optional(),
   OIDC_CLIENT_ID: z.string().min(1).optional(),

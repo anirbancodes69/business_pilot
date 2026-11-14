@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import type { SourceRow, SourceValue } from '../connectors/connector';
 import { findEntity } from '../mapping/canonical-catalog';
 import type { MappingDocument } from '../mapping/mapping-document';
 
@@ -6,8 +7,7 @@ import type { MappingDocument } from '../mapping/mapping-document';
 // Pure and deterministic: the same row and mapping always give the same row and content hash.
 // Errors carry a field name and a code, never a value (SECURITY.md: no row data in logs).
 
-export type SourceValue = string | number | boolean | Date | null | undefined;
-export type SourceRow = Record<string, SourceValue>;
+export type { SourceRow, SourceValue };
 export type CanonicalValue = string | number | boolean | null;
 
 /** A `lookup_ref` resolves the source key of a referenced entity to its canonical id, or null. */

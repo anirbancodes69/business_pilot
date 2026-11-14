@@ -1,6 +1,8 @@
 # Sync engine design
 
-Decision: [ADR-0005](../adr/ADR-0005-synchronization-architecture.md). Not implemented.
+Decision: [ADR-0005](../adr/ADR-0005-synchronization-architecture.md).
+
+**Implemented (Milestone 5, in progress, 2026-11-14):** full-snapshot sync through BullMQ (`apps/api/src/sync/`): idempotent upserts with content hash, reference resolution, dead letters, one running sync per source, `data_version` bump once per run with an outbox event written in the same transaction, per-batch checkpoints, run history and dataset freshness endpoints. The Excel and PostgreSQL connectors implement `readSnapshot`. A full snapshot restarts from the beginning after a crash (safe, because upserts are idempotent). **Not implemented yet:** incremental reads (cursor, fingerprint diff), delete propagation, schema drift detection, the outbox relay, scheduling, the admin alert and the UI. Everything below describes the target design.
 
 ## Concepts
 

@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 // Connector interface (E4.1, ADR-0004, contracts/connector/). Connectors are stateless: every call
 // receives configuration and decrypted credentials. Only the operations needed by Milestone 4
-// (capabilities, connection test, schema discovery) exist. readSnapshot, readChanges and listKeys
-// arrive with the sync engine (Milestone 5).
+// (capabilities, connection test, schema discovery) existed in Milestone 4. readSnapshot arrived
+// with the sync engine (Milestone 5). readChanges and listKeys follow with incremental sync.
 
 export const capabilitiesSchema = z.strictObject({
   connector_type: z.string().regex(/^[a-z][a-z0-9_]*$/),
@@ -85,6 +85,9 @@ export interface DiscoveredSchema {
   fingerprint: string;
 }
 
+export type SourceValue = string | number | boolean | Date | null | undefined;
+export type SourceRow = Record<string, SourceValue>;
+
 export interface Connector {
   readonly type: string;
   describeCapabilities(): ConnectorCapabilities;
@@ -94,6 +97,18 @@ export interface Connector {
   parseCredentials(credentials: unknown): unknown;
   testConnection(ctx: ConnectorCallContext): Promise<ConnectionTestResult>;
   discoverSchema(ctx: ConnectorCallContext): Promise<DiscoveredSchema>;
+  /**
+   * Reads every row of one object (a full snapshot), in batches, and passes each batch to
+   * `onBatch`. Only the named columns are read. Rows are in memory only and never logged. A
+   * batch is awaited before the next one is read, so the caller controls the pace.
+   */
+  readSnapshot(
+    ctx: ConnectorCallContext,
+    object: string,
+    columns: string[],
+    batchSize: number,
+    onBatch: (rows: SourceRow[]) => Promise<void>,
+  ): Promise<void>;
 }
 
 // Typed errors (contracts/connector/README.md). Messages never contain credentials or row values.

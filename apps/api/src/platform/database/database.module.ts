@@ -6,6 +6,8 @@ import { createDb, pingDb, type Database } from './database';
 import { type Tx, type TxOptions, withIdentityTx, withTenantTx, withUserTx } from './tenant-tx';
 
 export type { Tx };
+/** The SQL template tag, for statements bound to a `Tx` (the sync upserts). It is not a connection. */
+export { sql } from 'kysely';
 
 /** The only holder of the application database handle. Other modules receive a `Tx`. */
 @Injectable()

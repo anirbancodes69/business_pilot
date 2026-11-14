@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { Client, type ClientConfig } from 'pg';
+import { Client, type ClientConfig, escapeIdentifier } from 'pg';
 import { z } from 'zod';
 import {
   AuthError,
@@ -11,6 +11,7 @@ import {
   type DiscoveredObject,
   type DiscoveredSchema,
   EgressDeniedError,
+  type SourceRow,
   PermissionError,
   TransientError,
 } from '../connector';
@@ -173,6 +174,29 @@ export class PostgresConnector implements Connector {
         return { ok: false, errors: [error.message], privilege_warnings: [] };
       throw error;
     }
+  }
+
+  async readSnapshot(
+    ctx: ConnectorCallContext,
+    object: string,
+    columns: string[],
+    batchSize: number,
+    onBatch: (rows: SourceRow[]) => Promise<void>,
+  ): Promise<void> {
+    await this.withClient(ctx, async (client, config) => {
+      // Identifiers come from an approved mapping and are quoted. Values are never interpolated.
+      const list = columns.map((c) => escapeIdentifier(c)).join(', ');
+      const from = `${escapeIdentifier(config.schema)}.${escapeIdentifier(object)}`;
+      await client.query(`DECLARE bp_snapshot NO SCROLL CURSOR FOR SELECT ${list} FROM ${from}`);
+      for (;;) {
+        if (ctx.deadline - Date.now() <= 0) throw new TransientError('the sync ran too long');
+        const page = await client.query<SourceRow>(
+          `FETCH FORWARD ${Math.trunc(batchSize)} FROM bp_snapshot`,
+        );
+        if (page.rows.length === 0) break;
+        await onBatch(page.rows);
+      }
+    });
   }
 
   async discoverSchema(ctx: ConnectorCallContext): Promise<DiscoveredSchema> {
