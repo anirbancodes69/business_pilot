@@ -32,6 +32,8 @@ export interface AuthorizedView {
     business_definition?: string;
     certified?: boolean;
     valid_dimensions?: string[];
+    /** Measure to use for breakdowns this one does not support (an approximation). */
+    breakdown_measure?: string;
     drivers?: { components: string[] }[];
   }[];
   dimensions: {
@@ -129,6 +131,10 @@ export function buildAuthorizedView(
         business_definition: m.business_definition,
         certified: m.certified,
         valid_dimensions: validDims,
+        breakdown_measure:
+          m.breakdown_measure && measureIds.has(m.breakdown_measure)
+            ? m.breakdown_measure
+            : undefined,
         drivers: drivers?.length ? drivers : undefined,
       });
     }),

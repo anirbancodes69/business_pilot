@@ -28,6 +28,8 @@ export interface AnswerTable {
   truncated?: boolean;
   columns: { semantic_id: string; label: string; kind: 'dimension' | 'measure' }[];
   rows: (string | null)[][];
+  /** Evidence id of each displayed figure, parallel to rows. */
+  cell_evidence?: (string | null)[][];
 }
 export interface Answer {
   status: string;

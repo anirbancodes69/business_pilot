@@ -148,6 +148,8 @@ const FORMULAS: Record<string, string> = {
   abs_change: 'Change = current − previous',
   share_of_total: 'Share of total = part ÷ total',
   contribution_to_delta: 'Contribution = member change ÷ total change',
+  sum_of_changes: 'Total change = the sum of the changes of every member',
+  one_period_change: 'Change = the full value, because it appears in only one of the two periods',
 };
 
 const short = (hash: string): string => hash.slice(0, 10);

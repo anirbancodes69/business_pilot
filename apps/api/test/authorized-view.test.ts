@@ -140,4 +140,20 @@ describe('authorized view', () => {
         expect(json, forbidden).not.toContain(forbidden);
     }
   });
+
+  it('exposes the breakdown measure only when the user can see it', () => {
+    const owner = buildAuthorizedView(model, ctxFor(['owner']));
+    expect(owner.measures.find((m) => m.id === 'revenue')?.breakdown_measure).toBe('line_revenue');
+    const sales = buildAuthorizedView(
+      model,
+      ctxFor(['sales_manager'], { assigned_branch_ids: ['b1'] }),
+    );
+    expect(sales.measures.find((m) => m.id === 'revenue')?.breakdown_measure).toBe('line_revenue');
+    // a user who cannot see line revenue never learns that it exists
+    const noLines = {
+      ...ctxFor(['owner']),
+      granted: { ...ctxFor(['owner']).granted, measures: ['revenue'] },
+    };
+    expect(buildAuthorizedView(model, noLines).measures[0]?.breakdown_measure).toBeUndefined();
+  });
 });

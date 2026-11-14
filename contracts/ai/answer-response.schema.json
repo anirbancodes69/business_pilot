@@ -220,6 +220,19 @@
                 ]
               }
             }
+          },
+          "cell_evidence": {
+            "type": "array",
+            "description": "Evidence id of each displayed figure, parallel to `rows` (null for text cells). Lets the UI show where a figure comes from.",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
           }
         }
       }
@@ -599,7 +612,9 @@
                   "pct_change",
                   "abs_change",
                   "share_of_total",
-                  "contribution_to_delta"
+                  "contribution_to_delta",
+                  "sum_of_changes",
+                  "one_period_change"
                 ]
               },
               "input_ids": {

@@ -917,7 +917,7 @@
    "category": "diagnostic",
    "question": "Why did revenue drop in October?",
    "persona": "owner",
-   "status": "pending",
+   "status": "active",
    "expected": "plan",
    "expected_intent": "diagnostic",
    "expected_plan": {
@@ -938,7 +938,7 @@
     "branch.name=Nashik",
     "product.category=Snacks"
    ],
-   "needs": "E6.9 investigation"
+   "notes": "The investigation (rules, not the model) is checked by engine tests with a known world and live; here the planner must produce a diagnostic plan with a comparison and the compiler must execute it correctly."
   },
   {
    "id": "why-002",

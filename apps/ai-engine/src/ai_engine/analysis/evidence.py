@@ -10,7 +10,14 @@ from pydantic import BaseModel, ConfigDict
 
 from ai_engine.analysis.formatting import format_number
 
-FormulaId = Literal["pct_change", "abs_change", "share_of_total", "contribution_to_delta"]
+FormulaId = Literal[
+    "pct_change",
+    "abs_change",
+    "share_of_total",
+    "contribution_to_delta",
+    "sum_of_changes",
+    "one_period_change",
+]
 EVIDENCE_ID = re.compile(r"^ev_[a-z0-9]{4,16}$")
 
 

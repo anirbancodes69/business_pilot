@@ -19,6 +19,14 @@ class ViewMeasure(_Loose):
     synonyms: list[str] = []
     default_time_dimension: str | None = None
     valid_dimensions: list[str] | None = None
+    breakdown_measure: str | None = None
+    additivity: str | None = None
+    polarity: str | None = None
+
+
+class ViewHierarchy(_Loose):
+    name: str
+    level: int
 
 
 class ViewDimension(_Loose):
@@ -26,6 +34,8 @@ class ViewDimension(_Loose):
     label: str
     type: str
     synonyms: list[str] = []
+    hierarchy: ViewHierarchy | None = None
+    diagnostic: bool = False
 
 
 class ViewSettings(_Loose):

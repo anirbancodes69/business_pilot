@@ -88,6 +88,7 @@ export function wholesaleDistributionTemplate(): SemanticModelDocument {
         default_time_dimension: 'invoice.invoice_date',
         synonyms: ['sales', 'turnover'],
         tags: ['financial'],
+        breakdown_measure: 'line_revenue',
         business_definition:
           'Invoice net amount as synced from the source. Whether it includes tax depends on the source mapping.',
         valid_dimensions: [

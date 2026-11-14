@@ -98,7 +98,8 @@
     "customer.segment",
     "customer.city",
     "invoice.status"
-   ]
+   ],
+   "breakdown_measure": "line_revenue"
   },
   {
    "id": "invoice_count",

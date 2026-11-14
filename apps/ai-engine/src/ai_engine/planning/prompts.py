@@ -9,7 +9,7 @@ from datetime import datetime
 
 from ai_engine.planning.view import AuthorizedView
 
-PROMPT_VERSION = "planner-v3"
+PROMPT_VERSION = "planner-v4"
 MAX_QUESTION_CHARS = 1000
 
 SYSTEM = """You turn a business question into a JSON query plan. Reply with one JSON object only.
@@ -23,6 +23,7 @@ Rules:
 - Dates: never compute dates. Use time_range.relative with one of: today, yesterday, this_week, last_week, this_month, last_month, this_quarter, last_quarter, this_year, last_year, fiscal_ytd, this_fiscal_year, last_fiscal_year, last_n_days (with n), last_n_months (with n). Use start and end (YYYY-MM-DD) only when the user gave exact dates.
 - Never write numbers or figures as answers. You only plan the query.
 - "highest", "top", "worst" questions: intent "ranking", one dimension, sort by the measure, a limit.
+- Questions asking why something fell, rose or changed: intent "diagnostic", one measure, the time_range of the period asked about, and comparison {"type":"previous_period"}. Do not add dimensions or breakdowns: the system investigates.
 - Questions comparing two periods: intent "comparison" with comparison.type previous_period or same_period_last_year.
 - Over time: intent "trend", a time dimension with time_grain.
 - If the question is too vague to plan, reply {"outcome":"clarify","clarification_question":"..."}.

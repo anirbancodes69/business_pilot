@@ -4,8 +4,9 @@ import { createHash } from 'node:crypto';
 // (E6.6). No real person or company: every name is made up. The same seed always gives the same data.
 //
 // Planted facts the evaluation can rely on (all dates in 2026, "today" is 2026-11-15):
-//  - Nashik's snack sales fall sharply in October compared with September (a "why did sales drop"
-//    case with a known cause: Nashik, Snacks).
+//  - Nashik runs a big snack business through September (a promotion, five times the normal snack
+//    volume) that nearly stops in October. It is the dominant cause of October's revenue drop, so a
+//    "why did revenue drop" investigation should find Nashik, then Snacks.
 //  - Customers "Gokul Provision" and "Shree Mart" pay late and rarely, so they hold the highest
 //    outstanding receivables.
 //  - Some payments are partial; every payment is allocated to one invoice.
@@ -134,9 +135,11 @@ export function syntheticDistributor(seed = 42): SyntheticData {
       for (let k = 0; k < n; k++) {
         const p = Math.floor(r() * PRODUCTS.length);
         const product = PRODUCTS[p] as (typeof PRODUCTS)[number];
-        // Planted: Nashik snacks nearly stop selling in October.
-        if (october && branchIdx === 1 && product[2] === 'Snacks' && r() < 0.8) continue;
-        const qty = product[4] > 1000 ? 1 + Math.floor(r() * 4) : 5 + Math.floor(r() * 40);
+        // Planted: Nashik snacks nearly stop selling in October after a strong run before it.
+        const nashikSnacks = branchIdx === 1 && product[2] === 'Snacks';
+        if (october && nashikSnacks && r() < 0.95) continue;
+        const base = product[4] > 1000 ? 1 + Math.floor(r() * 4) : 5 + Math.floor(r() * 40);
+        const qty = nashikSnacks && !october ? base * 5 : base;
         lines.push({ p, qty, price: product[4] });
       }
       if (lines.length === 0) continue;

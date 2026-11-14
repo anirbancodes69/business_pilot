@@ -13,7 +13,7 @@ def test_the_golden_set_is_valid_for_every_persona_view() -> None:
     results, pending = run(suite, ReplayProvider())
     failed = {r.id: r.problems for r in results if not r.ok}
     assert failed == {}
-    assert len(results) >= 40 and pending == 5
+    assert len(results) >= 40 and pending == 4
     cats = {r.category for r in results}
     assert {
         "metric",

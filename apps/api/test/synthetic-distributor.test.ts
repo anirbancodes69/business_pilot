@@ -81,4 +81,27 @@ describe('synthetic distributor', () => {
       .map(([id]) => d.customer.find((c) => c.id === id)?.name);
     expect(new Set(top)).toEqual(new Set(['Gokul Provision', 'Shree Mart']));
   });
+
+  it('makes Nashik snacks the dominant cause of the October drop, so an investigation can find it', () => {
+    const inv = new Map(d.invoice.map((i) => [i.id, i]));
+    const prod = new Map(d.product.map((p) => [p.id, p]));
+    const branchName = new Map(d.branch.map((b) => [b.id, b.name]));
+    const month = (m: string) =>
+      d.invoice_line.filter((l) =>
+        String(inv.get(l.invoice_id as string)?.invoice_date).startsWith(m),
+      );
+    const total = (m: string) => month(m).reduce((s, l) => s + num(l.net_amount), 0);
+    const nashikSnacks = (m: string) =>
+      month(m)
+        .filter(
+          (l) =>
+            branchName.get(inv.get(l.invoice_id as string)?.branch_id as string) === 'Nashik' &&
+            prod.get(l.product_id as string)?.category === 'Snacks',
+        )
+        .reduce((s, l) => s + num(l.net_amount), 0);
+    const totalChange = total('2026-10') - total('2026-09');
+    const causeChange = nashikSnacks('2026-10') - nashikSnacks('2026-09');
+    expect(totalChange).toBeLessThan(0);
+    expect(causeChange / totalChange).toBeGreaterThan(0.5); // it explains more than half of the drop
+  });
 });

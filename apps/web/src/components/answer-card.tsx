@@ -189,10 +189,12 @@ export function AnswerCard({
                         <tr key={i}>
                           {row.map((cell, j) => {
                             const col = t.columns[j];
-                            const ev =
-                              col?.kind === 'measure'
-                                ? idx.byCell.get(`${t.result_set_id}|${col.semantic_id}|${i}`)
-                                : undefined;
+                            const evidenceId =
+                              t.cell_evidence?.[i]?.[j] ??
+                              (col?.kind === 'measure'
+                                ? idx.byCell.get(`${t.result_set_id}|${col.semantic_id}|${i}`)?.id
+                                : undefined);
+                            const ev = evidenceId ? idx.byId.get(evidenceId) : undefined;
                             return (
                               <td key={j} className={col?.kind === 'measure' ? 'num' : undefined}>
                                 {ev && cell != null ? (

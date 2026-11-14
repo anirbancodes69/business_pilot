@@ -47,9 +47,24 @@ def contribution_to_delta(
     )
 
 
+def sum_of_changes(ledger: EvidenceLedger, changes: list[Evidence]) -> Evidence:
+    """The total of several members' changes (used to size a drill-down's own total)."""
+    total = sum((_d(c) for c in changes), Decimal(0))
+    unit = changes[0].unit if changes else None
+    return ledger.add_derived(total, unit, "sum_of_changes", tuple(c.id for c in changes))
+
+
+def one_period_change(ledger: EvidenceLedger, value: Evidence, appeared: bool) -> Evidence:
+    """A member present in one period only: its whole value is the change (plus if it appeared)."""
+    signed = _d(value) if appeared else -_d(value)
+    return ledger.add_derived(signed, value.unit, "one_period_change", (value.id,))
+
+
 REGISTRY: tuple[FormulaId, ...] = (
     "pct_change",
     "abs_change",
     "share_of_total",
     "contribution_to_delta",
+    "sum_of_changes",
+    "one_period_change",
 )

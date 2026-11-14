@@ -3,6 +3,7 @@ import {
   Controller,
   ForbiddenException,
   GatewayTimeoutException,
+  HttpException,
   HttpCode,
   Post,
   Inject,
@@ -20,6 +21,7 @@ import { ServiceTokenGuard } from '../platform/service-auth/service-token.guard'
 import { PlanRejected } from './compiler';
 import { ContextRejected, PlanExecutor, PlanTimeout } from './plan-executor';
 import { queryPlanSchema } from './query-plan';
+import { DEFAULT_MAX_TOOL_CALLS, ToolCallBudget } from './tool-call-budget';
 
 const body = z.strictObject({ request_context: z.string().min(1), plan: z.unknown() });
 
@@ -27,6 +29,8 @@ const body = z.strictObject({ request_context: z.string().min(1), plan: z.unknow
 @Controller('internal/v1/tools')
 @UseGuards(ServiceTokenGuard)
 export class InternalToolsController {
+  private readonly budget = new ToolCallBudget();
+
   constructor(
     @Inject(PlanExecutor) private readonly executor: PlanExecutor,
     @Inject(RequestContextSigner) private readonly signer: RequestContextSigner,
@@ -44,6 +48,15 @@ export class InternalToolsController {
       if (e instanceof RequestContextError) throw new UnauthorizedException();
       throw e;
     }
+    // The limit comes from the signed context, never from the request body or the model.
+    if (
+      !this.budget.take(
+        claims.request_id,
+        claims.max_tool_calls ?? DEFAULT_MAX_TOOL_CALLS,
+        Date.parse(claims.expires_at),
+      )
+    )
+      throw new HttpException('tool call limit reached', 429);
     const plan = queryPlanSchema.safeParse(parsed.data.plan);
     if (!plan.success) throw new UnprocessableEntityException('invalid plan');
     try {

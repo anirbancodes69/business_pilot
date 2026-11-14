@@ -144,4 +144,26 @@ describe('wholesale_distribution template', () => {
   it('is a valid semantic model', () => {
     expect(validateSemanticModel(wholesaleDistributionTemplate()).problems).toEqual([]);
   });
+
+  describe('breakdown_measure', () => {
+    const model = () => wholesaleDistributionTemplate();
+
+    it('the template points revenue at line revenue for breakdowns', () => {
+      const m = model();
+      expect(m.measures.find((x) => x.id === 'revenue')?.breakdown_measure).toBe('line_revenue');
+      expect(validateSemanticModel(m).problems).toEqual([]);
+    });
+
+    it('must name an existing measure with the same unit on a different entity', () => {
+      const bad = (value: string) => {
+        const m = model();
+        const rev = m.measures.find((x) => x.id === 'revenue');
+        if (rev) rev.breakdown_measure = value;
+        return validateSemanticModel(m).problems.join(' ');
+      };
+      expect(bad('no_such_measure')).toContain('unknown breakdown measure');
+      expect(bad('invoice_count')).toContain('same unit');
+      expect(bad('average_order_value')).toContain('different entity');
+    });
+  });
 });

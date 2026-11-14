@@ -5,12 +5,14 @@ that passes the grounding check, the answer is degraded to facts written by code
 """
 
 import time
+from collections.abc import Callable
 from typing import Any
 
 from ai_engine.analysis.calculations import abs_change, pct_change
 from ai_engine.analysis.evidence import Evidence, EvidenceLedger, ResultRef
 from ai_engine.analysis.grounding import referenced_ids
 from ai_engine.answer import explainer
+from ai_engine.answer.findings import FINDINGS_ID, build_findings
 from ai_engine.answer.models import (
     AnswerRequest,
     AnswerResponse,
@@ -19,6 +21,7 @@ from ai_engine.answer.models import (
     ToolResultSet,
 )
 from ai_engine.answer.tools import DataTools, ToolError
+from ai_engine.investigation.engine import Investigation, investigate
 from ai_engine.llm import LlmProvider
 from ai_engine.planning import prompts as planner_prompts
 from ai_engine.planning.planner import PlannerOutcome, plan_question
@@ -112,16 +115,23 @@ def _tables(
     tables: list[dict[str, Any]] = []
     for rs in result.result_sets:
         rows: list[list[str | None]] = []
+        cell_evidence: list[list[str | None]] = []
         for i, row in enumerate(rs.rows[:MAX_ROWS]):
             cells: list[str | None] = []
+            ids: list[str | None] = []
             for col, value in zip(rs.columns, row, strict=False):
                 if value is None:
                     cells.append(None)
+                    ids.append(None)
                 elif col.kind == "dimension":
                     cells.append(str(value))
+                    ids.append(None)
                 else:
-                    cells.append(_cell(ledger, result, rs, col, i, value).display)
+                    ev = _cell(ledger, result, rs, col, i, value)
+                    cells.append(ev.display)
+                    ids.append(ev.id)
             rows.append(cells)
+            cell_evidence.append(ids)
         tables.append(
             {
                 "result_set_id": rs.id,
@@ -138,6 +148,7 @@ def _tables(
                     for c in rs.columns
                 ],
                 "rows": rows,
+                "cell_evidence": cell_evidence,
             }
         )
     return tables
@@ -226,6 +237,112 @@ def _degraded_facts(result: ToolResult, ledger: EvidenceLedger) -> list[dict[str
     return facts
 
 
+def _diagnosis(
+    req: AnswerRequest,
+    request_id: str,
+    provider: LlmProvider,
+    view: Any,
+    plan: dict[str, Any],
+    inv: Investigation,
+    outcome: PlannerOutcome,
+    explained: list[explainer.Explained],
+    versions: dict[str, str],
+    finish: Callable[[dict[str, Any]], AnswerResponse],
+) -> AnswerResponse:
+    ledger = EvidenceLedger(view.tenant_settings.number_format or "indian")
+    steps = [s for s in [inv.total, *inv.tried, *inv.drill] if s is not None]
+    execution: dict[str, Any] = {
+        "plan_hashes": list(dict.fromkeys(s.result.plan_hash for s in steps)),
+        "semantic_model_version": steps[0].result.semantic_model_version if steps else 0,
+        "grounding": "not_applicable",
+        "tool_calls": inv.calls,
+        "prompt_versions": versions,
+        "model_ids": [],
+    }
+    base: dict[str, Any] = {
+        "request_id": request_id,
+        "intent": "diagnostic",
+        "execution": execution,
+    }
+    f = build_findings(inv, ledger, view)
+    if f.table is not None:
+        base["tables"] = [f.table]
+    base["evidence"] = [e.model_dump(mode="json", exclude_none=True) for e in ledger.items()]
+
+    if inv.stop == "no_change":
+        base["evidence"] = [e.model_dump(mode="json", exclude_none=True) for e in ledger.items()]
+        return finish(
+            {
+                **base,
+                "status": "answered",
+                "summary": f"{inv.label} did not change between the two periods.",
+                "derived_calculations": [
+                    {"label": label, "evidence_id": ev.id} for label, ev in f.derived
+                ],
+            }
+        )
+    if not f.facts:
+        return finish(
+            {
+                **base,
+                "status": "answered",
+                "summary": f"I could not find what changed in {inv.label.lower()}.",
+                "unknowns": f.unknowns or inv.unknowns,
+                "derived_calculations": [
+                    {"label": label, "evidence_id": ev.id} for label, ev in f.derived
+                ],
+            }
+        )
+
+    versions["explainer"] = explainer.PROMPT_VERSION
+    notes = [
+        "Each row is a part of the business that drove the change. share_of_change says how much "
+        "of the change it explains. A row with a '›' is inside the part named before it.",
+    ]
+    ex = explainer.explain(req.question, f.data, f.derived, notes, {FINDINGS_ID}, ledger, provider)
+    explained.append(ex)
+    execution["model_ids"] = ex.models
+    unknowns = list(f.unknowns) + (list(ex.reply.unknowns) if ex.reply else [])
+    if ex.ok and ex.reply is not None:
+        execution["grounding"] = "passed" if ex.llm_calls == 1 else "passed_after_regeneration"
+        facts = [
+            {
+                "statement": ex.rendered[f"verified_facts.{i}"],
+                "result_set_id": fact.result_set_id,
+                "evidence_ids": referenced_ids(fact.statement),
+            }
+            for i, fact in enumerate(ex.reply.verified_facts)
+        ]
+        hypotheses = [
+            {
+                "text": ex.rendered[f"possible_explanations.{i}"],
+                "evidence_ids": referenced_ids(h.text),
+            }
+            for i, h in enumerate(ex.reply.possible_explanations)
+        ]
+        summary, status = ex.rendered["summary"], "answered"
+    else:
+        execution["grounding"] = "failed_degraded"
+        facts, hypotheses = f.facts, []
+        summary, status = "Here is what drove the change.", "answered_facts_only"
+        unknowns.append("A written explanation was not available for this answer.")
+    base["evidence"] = [e.model_dump(mode="json", exclude_none=True) for e in ledger.items()]
+    return finish(
+        {
+            **base,
+            "status": status,
+            "summary": summary,
+            "verified_facts": facts,
+            "derived_calculations": [
+                {"label": label, "evidence_id": ev.id} for label, ev in f.derived
+            ],
+            "possible_explanations": hypotheses,
+            "unknowns": unknowns,
+            "analytical_context": _context(req, outcome, [e.id for e in ledger.items()]),
+        }
+    )
+
+
 def answer_question(
     req: AnswerRequest, request_id: str, provider: LlmProvider, tools: DataTools
 ) -> AnswerResponse:
@@ -286,9 +403,8 @@ def answer_question(
 
     plan = outcome.plan
     intent = str(plan["intent"])
-    try:
-        result = tools.execute_plan(req.request_context, request_id, plan)
-    except ToolError as e:
+
+    def tool_failure(e: ToolError) -> AnswerResponse:
         if e.kind == "not_authorized":
             return finish(
                 _unavailable(
@@ -304,6 +420,23 @@ def answer_question(
             "rate_limited": "Too many requests right now. Please try again shortly.",
         }.get(e.kind, "The query could not be run.")
         return finish(_unavailable(request_id, intent, "failed", text, unknowns=[text]))
+
+    if intent == "diagnostic" and plan.get("comparison"):
+        # A "why" question: a bounded investigation chosen by rules (D-20), not by the model.
+        try:
+            inv = investigate(
+                plan, view, lambda p: tools.execute_plan(req.request_context, request_id, p)
+            )
+        except ToolError as e:
+            return tool_failure(e)
+        return _diagnosis(
+            req, request_id, provider, view, plan, inv, outcome, explained, versions, finish
+        )
+
+    try:
+        result = tools.execute_plan(req.request_context, request_id, plan)
+    except ToolError as e:
+        return tool_failure(e)
 
     ledger = EvidenceLedger(view.tenant_settings.number_format or "indian")
     execution: dict[str, Any] = {

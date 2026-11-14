@@ -56,7 +56,7 @@ def test_happy_path_renders_numbers_from_the_ledger_only() -> None:
     assert r.summary == "Asha Traders owes the most, ₹9.00 lakh."
     assert r.verified_facts[0]["statement"] == "Top: ₹9.00 lakh"
     assert r.execution["grounding"] == "passed" and r.execution["tool_calls"] == 1
-    assert r.execution["prompt_versions"] == {"planner": "planner-v3", "explainer": "explainer-v2"}
+    assert r.execution["prompt_versions"] == {"planner": "planner-v4", "explainer": "explainer-v2"}
     # usage is counted for metering: counts only, one planner and one explainer call
     assert r.execution["usage"] == {
         "planner": {"calls": 1, "input_tokens": 100, "output_tokens": 20},
@@ -74,6 +74,9 @@ def test_happy_path_renders_numbers_from_the_ledger_only() -> None:
     assert [c["label"] for c in table["columns"]] == ["Customer", "Outstanding receivables"]
     assert table["rows"] == [["Asha Traders", "₹9.00 lakh"], ["Vikram Stores", "₹50,000"]]
     assert table["as_of"] == "2026-11-15T04:30:00Z" and table["title"] == "Current period"
+    # each figure names its evidence record, so the UI can show where it comes from
+    ids = {e["id"] for e in r.evidence}
+    assert table["cell_evidence"][0][0] is None and table["cell_evidence"][0][1] in ids
     # every cited evidence id exists in the ledger, and the context holds ids only
     ids = {e["id"] for e in r.evidence}
     assert all(i in ids for f in r.verified_facts for i in f["evidence_ids"])
