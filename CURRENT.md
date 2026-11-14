@@ -2,11 +2,11 @@
 
 > Living document. Update it after every meaningful change (see [CLAUDE.md](CLAUDE.md)). Only list something as Implemented if it exists in the repository and has been run or tested.
 
-**Project status:** Milestones 1 to 4 are merged to `main` (PR #1, #3, #4, #5). Milestone 5 is complete at API level on `feature/m5-sync-engine` (not merged, not pushed, CI not run). Milestones 4 and 5 exist at API level only. **No end-user product feature exists yet.** Product direction: AI Business Analyst (documented 2026-11-13).
+**Project status:** Milestones 1 to 5 are merged to `main` (PR #1, #3, #4, #5, #8). Milestone 6 has started with the E6.0 decisions only (no code). Milestone 5 is complete at API level and merged to `main` (PR #8, 2026-11-14; CI on the merge commit not checked by me, `gh` is not installed). Milestones 4 and 5 exist at API level only. **No end-user product feature exists yet.** Product direction: AI Business Analyst (documented 2026-11-13).
 
 **Current milestone:** [Milestone 4](ROADMAP.md#milestone-4--data-connector-framework), merged to `main` on 2026-11-14 (PR #5; all six CI jobs passed on the merge commit, including `tenant-isolation`). Done: E4.1, the PostgreSQL connector (E4.3, test and discovery), the dummy LLM and object storage adapters (E4.0 interim), the Excel upload connector (E4.2), the human approval of objects and the mapping workflow (E4.4: suggest, review, approve, activate). **Milestone 4 acceptance is partly met, at API level only** (an end-to-end test covers the Excel path): there is no UI, suggestions are heuristic and not AI-assisted, E4.0 was replaced by a dummy provider, and the PostgreSQL path was not run through the mapping flow. An independent audit of Milestones 1 to 4 was done on 2026-11-14; its fixes were merged to `main` the same day (PR #6; all six CI jobs passed on the merge commit). Local-volume object storage and a Keycloak container for local sign-in are on branch `feature/local-storage-and-keycloak` (ADR-0016, not merged).
 
-**Last updated:** 2026-11-14 (Milestone 5 complete at API level: sync engine, relay, scheduler, notifications)
+**Last updated:** 2026-11-14 (Milestone 5 merged; Milestone 6 started: ADR-0018 drafted for recommendations)
 
 ## Implemented
 
@@ -154,6 +154,6 @@ See [DECISIONS.md](DECISIONS.md): 19 Accepted, 18 Proposed, 21 OPEN. In summary:
 
 ## Next three actionable tasks
 
-1. **Push `feature/m5-sync-engine`, open a PR and get CI green** (new: Redis in the isolation job, `POSTGRES_SYSTEM_PASSWORD` in the generated `.env`; a Compose smoke test must still reach all-healthy). Then merge.
+1. **Confirm the E6.0 decisions** (D-OPEN-19, -20, -21 and -23, all with a recommendation: A, A, A and hybrid) and **choose the LLM provider** (D-OPEN-01, E6.1). Also check that CI is green on `main` after the M5 merge.
 2. **Decide whether to fix the cheapest open audit findings:** the Excel zip guard that trusts declared sizes, and the local key-encryption key being accepted in production mode.
-3. **Milestone 6 (AI orchestration)**: start with E6.0 (decide D-OPEN-19, -20, -21, -23) and E6.1 (the LLM provider). Also update `data-handling.md` and the RequestContext contract text.
+3. **Milestone 6 (AI orchestration)**: once E6.0 is confirmed, bump the `answer-response` contract to 0.2.0 and begin E6.3 (api `execute-plan` and the SQL compiler), which needs no LLM. Also update `data-handling.md` and the RequestContext contract text.
