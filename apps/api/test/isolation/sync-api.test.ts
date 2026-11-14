@@ -116,4 +116,41 @@ describe('sync endpoints', () => {
     expect((await api(`/v1/data-sources/${id}/datasets`, viewer())).status).toBe(403);
     expect((await api('/v1/data-sources/not-a-uuid/sync-runs', a())).status).toBe(404);
   });
+
+  it('lists notifications per tenant, marks one read, and needs data_source:manage', async () => {
+    const id = await newSource(a());
+    const noteId = await f.db.tenantTx(
+      f.A.tenantId,
+      async (tx) =>
+        (
+          await tx
+            .insertInto('core.notification')
+            .values({
+              tenant_id: f.A.tenantId,
+              kind: 'sync.failed',
+              severity: 'warning',
+              data_source_id: id,
+              metadata: JSON.stringify({ error_code: 'x' }),
+            })
+            .returning('id')
+            .executeTakeFirstOrThrow()
+        ).id,
+    );
+    const mine = (await (await api('/v1/notifications', a())).json()) as {
+      id: string;
+      read_at: string | null;
+    }[];
+    expect(mine.find((n) => n.id === noteId)?.read_at).toBeNull();
+    expect(await (await api('/v1/notifications', b())).json()).toEqual([]);
+    expect((await api('/v1/notifications', viewer())).status).toBe(403);
+    expect((await api(`/v1/notifications/${noteId}/read`, { ...b(), method: 'POST' })).status).toBe(
+      404,
+    );
+    expect((await api(`/v1/notifications/${noteId}/read`, { ...a(), method: 'POST' })).status).toBe(
+      200,
+    );
+    expect((await api(`/v1/notifications/${noteId}/read`, { ...a(), method: 'POST' })).status).toBe(
+      404,
+    );
+  });
 });

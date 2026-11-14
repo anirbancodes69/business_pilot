@@ -5,11 +5,16 @@ import type { Database } from './schema';
 
 export type { Database };
 
-export type Role = 'app' | 'owner';
+export type Role = 'app' | 'owner' | 'system';
 
 export function createDb(env: Env, role: Role): Kysely<Database> {
   const owner = role === 'owner';
-  const password = owner ? env.POSTGRES_OWNER_PASSWORD : env.POSTGRES_APP_PASSWORD;
+  const password =
+    role === 'owner'
+      ? env.POSTGRES_OWNER_PASSWORD
+      : role === 'system'
+        ? env.POSTGRES_SYSTEM_PASSWORD
+        : env.POSTGRES_APP_PASSWORD;
   if (!password) throw new Error('Database password is not configured');
   return new Kysely<Database>({
     dialect: new PostgresDialect({
@@ -17,9 +22,13 @@ export function createDb(env: Env, role: Role): Kysely<Database> {
         host: env.POSTGRES_HOST,
         port: env.POSTGRES_PORT,
         database: env.POSTGRES_DB,
-        user: owner ? env.POSTGRES_OWNER_USER : env.POSTGRES_APP_USER,
+        user: owner
+          ? env.POSTGRES_OWNER_USER
+          : role === 'system'
+            ? 'bp_system'
+            : env.POSTGRES_APP_USER,
         password,
-        max: 10,
+        max: role === 'system' ? 2 : 10,
         connectionTimeoutMillis: 3000,
       }),
     }),

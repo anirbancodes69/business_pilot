@@ -1,12 +1,12 @@
 # ADR-0017: Outbox relay and the `bp_system` role
 
-- **Status:** Proposed
+- **Status:** Accepted (2026-11-14, the product owner delegated the recommended decisions for Milestone 5)
 - **Date:** 2026-11-14
-- **Decision items:** P-22 (new). Builds on P-06 (transactional outbox) and P-15 (b) (the `bp_system` exception). Needs product owner confirmation before it is built.
+- **Decision items:** D-19 (formerly P-22). Builds on P-06 (transactional outbox) and P-15 (b) (the `bp_system` exception).
 
 | Item | Status |
 |---|---|
-| P-22 The outbox relay and the sync scheduler find work through a tenant list read as `bp_system`, and touch tenant data only in per-tenant jobs that run as `bp_app` | Proposed |
+| D-19 The outbox relay and the sync scheduler find work through a tenant list read as `bp_system`, and touch tenant data only in per-tenant jobs that run as `bp_app` | Accepted |
 
 ## Context
 
@@ -57,6 +57,10 @@ Under forced RLS, `bp_app` sees nothing without a tenant context. P-15 (b) alrea
 - E5.4 (relay) and the sync scheduler (E5.5) follow this design once it is accepted.
 - SECURITY.md §4, `infrastructure/postgres/README.md` and ADR-0014's remark that `bp_system` "can read and update tenant status only" are updated when this is accepted. The existing local volume must be recreated once.
 - M6 and M7 consumers must de-duplicate by event ID.
+
+## Implementation notes (2026-11-14)
+
+Built in Milestone 5: `SystemDatabase` (the `bp_system` connection), `SystemSweeper`, `TaskQueue` and `TaskWorker`, `OutboxRelay`, `EventQueue`, `SyncScheduler`, migration 0010 (the delete policy). The first tick of the sweeper runs at worker start. Differences from the text above: the sweep interval is 60 seconds; the scheduler runs only for source types with an interval (PostgreSQL, 15 minutes), so an Excel source syncs only on upload or activation; the outbox retention check runs inside every relay task.
 
 ## Revisit conditions
 

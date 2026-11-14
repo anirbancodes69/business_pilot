@@ -2,10 +2,12 @@ import { Global, Inject, Injectable, Module, type OnModuleDestroy } from '@nestj
 import type { Kysely } from 'kysely';
 import { Env_TOKEN } from '../config/config.module';
 import type { Env } from '../config/env';
+import { SystemDatabase } from './system-database';
 import { createDb, pingDb, type Database } from './database';
 import { type Tx, type TxOptions, withIdentityTx, withTenantTx, withUserTx } from './tenant-tx';
 
 export type { Tx };
+export { SystemDatabase };
 /** The SQL template tag, for statements bound to a `Tx` (the sync upserts). It is not a connection. */
 export { sql } from 'kysely';
 
@@ -40,5 +42,8 @@ export class DatabaseService implements OnModuleDestroy {
 }
 
 @Global()
-@Module({ providers: [DatabaseService], exports: [DatabaseService] })
+@Module({
+  providers: [DatabaseService, SystemDatabase],
+  exports: [DatabaseService, SystemDatabase],
+})
 export class DatabaseModule {}

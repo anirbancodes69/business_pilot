@@ -230,6 +230,13 @@ describe('PostgreSQL incremental sync and deletes (E5.2, E5.3)', () => {
           .where('target', '=', id)
           .execute();
         expect(audit.map((a) => a.action)).toContain('sync.paused_schema_drift');
+        const note = await tx
+          .selectFrom('core.notification')
+          .select(['kind', 'severity', 'metadata'])
+          .where('data_source_id', '=', id)
+          .execute();
+        expect(note).toHaveLength(1);
+        expect(note[0]).toMatchObject({ kind: 'sync.paused_schema_drift', severity: 'warning' });
       });
       // The paused mapping is no longer active: nothing syncs until a person approves a new one.
       await expect(pg().run(f.A.tenantId, id, 'manual')).rejects.toThrow('no active mapping');

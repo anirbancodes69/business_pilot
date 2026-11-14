@@ -17,6 +17,8 @@ import type { AuthedRequest } from '../identity/auth.types';
 import { DatabaseService } from '../platform/database/database.module';
 import { SyncQueue } from './sync-queue';
 
+export const FRESHNESS_THRESHOLD_MS = 24 * 3_600_000;
+
 function uuidParam(value: string): string {
   if (!z.string().uuid().safeParse(value).success) throw new NotFoundException();
   return value;
@@ -97,7 +99,7 @@ export class SyncController {
   @RequirePermission('data_source:manage')
   async datasets(@Req() req: AuthedRequest, @Param('id') id: string) {
     const { tenantId } = req.auth as NonNullable<AuthedRequest['auth']>;
-    return this.db.tenantTx(tenantId, (tx) =>
+    const rows = await this.db.tenantTx(tenantId, (tx) =>
       tx
         .selectFrom('core.dataset')
         .select([
@@ -112,5 +114,14 @@ export class SyncController {
         .orderBy('canonical_entity')
         .execute(),
     );
+    // Stale: never synced successfully, or older than the default threshold (a per-tenant setting
+    // arrives with the AI configuration, M6).
+    const now = Date.now();
+    return rows.map((r) => ({
+      ...r,
+      stale:
+        r.last_successful_sync_at === null ||
+        now - r.last_successful_sync_at.getTime() > FRESHNESS_THRESHOLD_MS,
+    }));
   }
 }

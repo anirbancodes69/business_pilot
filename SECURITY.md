@@ -54,7 +54,7 @@ Rules:
 - Cross-tenant platform operations (billing, support) use a separate audited role and code path, never the request path.
 - **Defined exceptions (P-15). These are the only ones:**
   1. *Membership lookup at login.* Before a tenant is selected, `tenant_membership` has an additional policy `USING (user_id = current_setting('app.user_id', true)::uuid)`. It lets a user list only their own memberships. No other table has this policy.
-  2. *Worker system tasks* (outbox relay, sync scheduler, retention and deletion sweeps) run as the `bp_system` role. It has `SELECT`/`UPDATE` only on named control-plane tables (`outbox_event`, `sync_job`, `dataset`, `tenant` status) and no grants at all on `analytics`. Any task that touches tenant data enqueues a per-tenant job, which then runs as `bp_app` with tenant context set.
+  2. *Worker system tasks* (outbox relay, sync scheduler, retention and deletion sweeps) find their work as the `bp_system` role (ADR-0017). It has `SELECT (id, status)` and `UPDATE (status)` on `core.tenant` and **no grant on any other table**, including `analytics`, `outbox_event` and the sync tables. It logs in with its own password, held by the worker only. A sweeper lists active tenants and queues one task per tenant. Each task touches tenant data as `bp_app` with tenant context set.
 - RLS is the safety net. The data-access layer must still filter by tenant explicitly and apply ABAC filters itself.
 
 ## 5. Isolation outside PostgreSQL

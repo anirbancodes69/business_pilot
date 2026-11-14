@@ -4,7 +4,7 @@ Ordering principle: reach a **working vertical slice** fast. The slice is one pi
 
 Where a later milestone's items are needed by the slice, a thin version is pulled forward, and each milestone says what it defers.
 
-Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestones 5 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
+Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestone 5 **Implemented at API level on branch `feature/m5-sync-engine`, not merged** (the sync UI moved to M9); Milestones 6 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
 
 ---
 
@@ -74,6 +74,7 @@ Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`
 - E5.3 Delete propagation through key-set reconciliation. Schema drift detection with pause and re-approval.
 - E5.4 Transactional outbox and relay. `data_version` bump per dataset.
 - E5.5 Retry, backoff, dead-letter, and sync status and freshness API and UI.
+- **Status (2026-11-14):** built at API level, not merged yet. The UI moved to Milestone 9 (E9.1), as the approval UI did. E5.2 Excel uses a full re-read with row-hash skipping instead of a separate fingerprint diff. Outbox relay and scheduler per [ADR-0017](docs/adr/ADR-0017-outbox-relay-and-the-bp-system-role.md).
 
 **Depends on:** M4.
 **Acceptance:** re-running the same sync makes no changes. Deleted source rows are marked deleted after reconciliation. A breaking schema change pauses the source and alerts the admin. Freshness is visible per dataset.

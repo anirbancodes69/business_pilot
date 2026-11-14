@@ -32,6 +32,7 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | D-16 | Access policy grants (formerly P-21): an access policy may grant only non-data permissions from the permission catalog, and never `tenant:manage`, `user:manage`, `data_source:manage`, `mapping:approve`, `semantic_model:manage` or `semantic_model:publish`: those come from a role assignment only, so a policy cannot bypass human approval (D-10). Policy rules must name columns known for the entity. Confirmed 2026-11-14. | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 | D-17 | Object storage for now (narrows D-OPEN-24): a local directory adapter on a Docker volume shared by the api and the worker. It works on one machine only. The S3-compatible product for hosted deployments is still OPEN. Confirmed 2026-11-14. | [0016](docs/adr/ADR-0016-local-volume-storage-and-keycloak-for-development.md) |
 | D-18 | Identity provider for local development (narrows D-OPEN-03b): Keycloak in the Compose stack, with a realm file that holds no users or secrets. The production provider is still OPEN. Confirmed 2026-11-14. | [0016](docs/adr/ADR-0016-local-volume-storage-and-keycloak-for-development.md) |
+| D-19 | Outbox relay and scheduler (formerly P-22, narrows P-15 b): `bp_system` logs in and reads only the tenant list; the relay and the scheduler run as per-tenant jobs as `bp_app` under RLS; at-least-once delivery with the event id as job id; events are triggers, not the source of truth. Confirmed 2026-11-14 (the product owner delegated the recommended decisions for Milestone 5). | [0017](docs/adr/ADR-0017-outbox-relay-and-the-bp-system-role.md) |
 
 ## Proposed
 
@@ -55,7 +56,6 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | P-18 | Authentication through an external OIDC provider. The api verifies tokens and reads identity only. Tenant selection is a request checked against membership. No provider configured means every authenticated route fails closed (formerly D-OPEN-03, approach only). | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 | P-19 | Service trust (MVP): a shared service token for internal endpoints, plus an HMAC-SHA256 signed, 2-minute RequestContext bound to the request ID, with key rotation overlap (formerly D-OPEN-15). | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 | P-20 | RLS details: `set_config(..., true)` as the parameterized form of `SET LOCAL`; `app_user` and `permission` as the only non-RLS global tables; non-superuser `bp_owner`; `bp_system` without login until Milestone 5. | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
-| P-22 | Outbox relay and scheduler (narrows P-15 b): `bp_system` reads only the tenant list; per-tenant relay and schedule jobs run as `bp_app` under RLS; at-least-once delivery with the event ID as job ID; events are triggers, not the source of truth. Awaiting confirmation. | [0017](docs/adr/ADR-0017-outbox-relay-and-the-bp-system-role.md) |
 
 ## OPEN
 

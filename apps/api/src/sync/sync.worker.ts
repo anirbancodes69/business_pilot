@@ -4,7 +4,12 @@ import { UnrecoverableError, Worker } from 'bullmq';
 import { Env_TOKEN } from '../platform/config/config.module';
 import type { Env } from '../platform/config/env';
 import { redisConnection, syncJobSchema } from './sync-queue';
-import { SyncAlreadyRunningError, SyncNotPossibleError, SyncService } from './sync.service';
+import {
+  NoActiveMappingError,
+  SyncAlreadyRunningError,
+  SyncNotPossibleError,
+  SyncService,
+} from './sync.service';
 
 /** The sync consumer. It runs only in the worker process. Logs carry ids and codes, never data. */
 @Injectable()
@@ -36,6 +41,7 @@ export class SyncWorker implements OnModuleInit, OnModuleDestroy {
           );
           return { run_id: result.runId, status: result.status };
         } catch (error) {
+          if (error instanceof NoActiveMappingError) return { skipped: 'no_active_mapping' };
           // Nothing a retry can fix: do not retry. Anything else (transient) is retried with backoff.
           if (error instanceof SyncAlreadyRunningError || error instanceof SyncNotPossibleError)
             throw new UnrecoverableError(error.message);

@@ -214,6 +214,17 @@ export interface OutboxEventTable {
   published_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
 }
 
+export interface NotificationTable {
+  id: Generated<string>;
+  tenant_id: string;
+  kind: 'sync.paused_schema_drift' | 'sync.auth_failed' | 'sync.failed';
+  severity: 'info' | 'warning' | 'critical';
+  data_source_id: string | null;
+  metadata: Json;
+  created_at: Generated<Date>;
+  read_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+}
+
 export interface Database {
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
@@ -235,4 +246,5 @@ export interface Database {
   'core.dataset': DatasetTable;
   'core.sync_dead_letter': SyncDeadLetterTable;
   'core.outbox_event': OutboxEventTable;
+  'core.notification': NotificationTable;
 }

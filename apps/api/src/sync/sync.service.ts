@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import {
   AuthError,
@@ -13,6 +13,7 @@ import { DataSourceService } from '../connectors/data-source.service';
 import { ENTITIES, findEntity } from '../mapping/canonical-catalog';
 import type { MappingDocument } from '../mapping/mapping-document';
 import { DatabaseService, sql, type Tx } from '../platform/database/database.module';
+import { TaskQueue } from './task-queue';
 import { detectDrift, mappedColumns, mappingHash } from './drift';
 import { RowError, sourceKeyOf, transformRow, type TransformedRow } from './transform';
 
@@ -57,6 +58,12 @@ export class SyncAlreadyRunningError extends Error {
   }
 }
 export class SyncNotPossibleError extends Error {}
+/** Normal before a mapping is activated (an upload comes first): a skipped job, not a failure. */
+export class NoActiveMappingError extends SyncNotPossibleError {
+  constructor() {
+    super('no active mapping');
+  }
+}
 /** A full read returned no rows although rows are stored: refused, so an outage cannot wipe data. */
 export class SourceEmptyError extends Error {}
 
@@ -84,6 +91,7 @@ export class SyncService {
     @Inject(DatabaseService) private readonly db: DatabaseService,
     @Inject(DataSourceService) private readonly sources: DataSourceService,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Optional() @Inject(TaskQueue) private readonly tasks?: TaskQueue,
   ) {}
 
   async run(tenantId: string, dataSourceId: string, trigger: SyncTrigger): Promise<SyncResult> {
@@ -104,7 +112,7 @@ export class SyncService {
         .where('data_source_id', '=', dataSourceId)
         .where('status', '=', 'active')
         .execute();
-      if (mappings.length === 0) throw new SyncNotPossibleError('no active mapping');
+      if (mappings.length === 0) throw new NoActiveMappingError();
       // A worker that died mid-run leaves a run that is still marked running: release the source.
       await sql`UPDATE core.sync_run SET status = 'failed', finished_at = now(), error_code = 'abandoned'
         WHERE data_source_id = ${dataSourceId} AND status = 'running'
@@ -227,13 +235,36 @@ export class SyncService {
         })
         .where('id', '=', runId)
         .execute();
+      const kind =
+        fatal instanceof AuthError || fatal instanceof PermissionError
+          ? 'sync.auth_failed'
+          : status === 'failed' && !(fatal instanceof TransientError)
+            ? 'sync.failed'
+            : undefined;
       if (fatal instanceof AuthError || fatal instanceof PermissionError)
         await tx
           .updateTable('core.data_source')
           .set({ status: 'error' })
           .where('id', '=', dataSourceId)
           .execute();
+      if (kind)
+        await tx
+          .insertInto('core.notification')
+          .values({
+            tenant_id: tenantId,
+            kind,
+            severity: kind === 'sync.auth_failed' ? 'critical' : 'warning',
+            data_source_id: dataSourceId,
+            metadata: JSON.stringify({
+              run_id: runId,
+              error_code: fatal ? errorCode(fatal) : 'all_objects_failed',
+            }),
+          })
+          .execute();
     });
+    // Fast path for the outbox (ADR-0017): the sweeper is the safety net if this is lost.
+    if (all.some((s) => s.rows_changed > 0 || s.rows_deleted > 0))
+      await this.tasks?.enqueueQuietly({ kind: 'relay', tenantId });
     // A transient failure is rethrown after the run is recorded, so the queue can retry it.
     if (fatal instanceof TransientError) throw fatal;
     return { runId, status, objects };
@@ -294,6 +325,16 @@ export class SyncService {
         target: dataSourceId,
         metadata: { source_object: mapping.source_object, problems },
       });
+      await tx
+        .insertInto('core.notification')
+        .values({
+          tenant_id: tenantId,
+          kind: 'sync.paused_schema_drift',
+          severity: 'warning',
+          data_source_id: dataSourceId,
+          metadata: JSON.stringify({ source_object: mapping.source_object, problems }),
+        })
+        .execute();
     });
   }
 

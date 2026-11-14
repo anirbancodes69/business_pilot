@@ -37,6 +37,7 @@ services:
       POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD:?set POSTGRES_OWNER_PASSWORD in .env}
       POSTGRES_APP_USER: ${POSTGRES_APP_USER:-bp_app}
       POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD in .env}
+      POSTGRES_SYSTEM_PASSWORD: ${POSTGRES_SYSTEM_PASSWORD:?set POSTGRES_SYSTEM_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ../postgres/init:/docker-entrypoint-initdb.d:ro
@@ -180,6 +181,8 @@ services:
     environment:
       <<: *node-env
       OTEL_SERVICE_NAME: bp-worker
+      # Only the worker may use the system role (ADR-0017). The api never receives this value.
+      POSTGRES_SYSTEM_PASSWORD: ${POSTGRES_SYSTEM_PASSWORD:?set POSTGRES_SYSTEM_PASSWORD in .env}
       WORKER_HEALTH_PORT: '3002'
     volumes: [objectdata:/var/lib/businesspilot/objects]
     depends_on:

@@ -8,6 +8,7 @@ import * as m0006 from './0006_data_sources';
 import * as m0007 from './0007_uploads_and_objects';
 import * as m0008 from './0008_entity_mapping';
 import * as m0009 from './0009_sync';
+import * as m0010 from './0010_notifications_and_outbox_retention';
 
 // Forward-only migrations (ADR-0009). Names sort in application order. No down migrations.
 const migrations: Record<string, Migration> = {
@@ -20,6 +21,7 @@ const migrations: Record<string, Migration> = {
   '0007_uploads_and_objects': { up: m0007.up },
   '0008_entity_mapping': { up: m0008.up },
   '0009_sync': { up: m0009.up },
+  '0010_notifications_and_outbox_retention': { up: m0010.up },
 };
 
 export const migrationProvider: MigrationProvider = {

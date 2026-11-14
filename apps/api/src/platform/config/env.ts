@@ -11,6 +11,8 @@ const schema = z.object({
   POSTGRES_DB: z.string().default('businesspilot'),
   POSTGRES_APP_USER: z.string().default('bp_app'),
   POSTGRES_APP_PASSWORD: z.string().min(1),
+  // Worker only (ADR-0017). Unset = no sweeper: nothing runs on a timetable and no relay sweep happens.
+  POSTGRES_SYSTEM_PASSWORD: z.string().min(1).optional(),
   POSTGRES_OWNER_USER: z.string().default('bp_owner'),
   POSTGRES_OWNER_PASSWORD: z.string().optional(),
   // Job queue (BullMQ on Redis). Unset = no jobs can be queued: sync requests then fail closed.
