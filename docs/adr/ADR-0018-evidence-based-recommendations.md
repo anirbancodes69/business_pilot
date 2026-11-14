@@ -1,6 +1,6 @@
 # ADR-0018: How recommendations are generated
 
-- **Status:** Proposed (recommendation made 2026-11-14; the product owner has not confirmed it)
+- **Status:** Accepted 2026-11-14 as D-23 (the product owner approved the recommendation)
 - **Date:** 2026-11-14
 - **Decision items:** D-OPEN-23
 

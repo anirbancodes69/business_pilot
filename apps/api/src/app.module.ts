@@ -1,5 +1,6 @@
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { SyncModule } from './sync/sync.module';
+import { QueryModule } from './query/query.module';
 import { ConnectorsModule } from './connectors/connectors.module';
 import { ConfigurationModule } from './configuration/configuration.module';
 import { MappingModule } from './mapping/mapping.module';
@@ -25,6 +26,7 @@ import { requestIdMiddleware } from './platform/request-id/request-id';
     ConnectorsModule,
     MappingModule,
     SyncModule,
+    QueryModule,
   ],
 })
 export class AppModule implements NestModule {

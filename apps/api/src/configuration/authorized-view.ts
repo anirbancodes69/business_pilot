@@ -1,4 +1,5 @@
 import type { AuthorizationContext } from '../authorization/authorization';
+import { measureColumns } from '../query/expressions';
 import type { SemanticModelDocument } from './semantic-model.validator';
 
 // Authorized semantic view (contracts/semantic-model/README.md): the only description of the
@@ -64,7 +65,7 @@ export function buildAuthorizedView(
     (m) =>
       ctx.granted.measures.includes(m.id) &&
       entities.has(m.entity) &&
-      !(m.attribute && masked.has(`${m.entity}.${m.attribute}`)),
+      !measureColumns(model, m.id).some((c) => masked.has(`${c.entity}.${c.column}`)),
   );
   for (;;) {
     const ids = new Set(measures.map((m) => m.id));
