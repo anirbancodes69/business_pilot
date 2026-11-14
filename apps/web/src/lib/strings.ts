@@ -31,6 +31,8 @@ export const S = {
   hypothesisNote: 'Hypotheses, not verified by your data.',
   dataAsOf: 'Data as of',
   showing: 'Showing',
+  sources: 'Sources',
+  staleData: 'This data may be out of date.',
   truncated: 'Only the first rows are shown.',
   status: {
     answered_facts_only: 'Explanation unavailable. Showing the results only.',

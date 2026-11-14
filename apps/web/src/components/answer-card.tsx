@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useMemo, useState } from 'react';
-import { type QuestionResponse, buildAnswerView } from '../lib/answer-view';
+import { type QuestionResponse, buildAnswerView, sourceLines } from '../lib/answer-view';
 import { S } from '../lib/strings';
 import { chartModel, evidenceIndex, kpis, toCsv } from '../lib/visuals';
 import { BarChart, LineChart } from './charts';
@@ -41,6 +41,7 @@ export function AnswerCard({
   const a = response.answer;
   const v = useMemo(() => buildAnswerView(a), [a]);
   const idx = useMemo(() => evidenceIndex(a.evidence ?? []), [a.evidence]);
+  const sourceLinesOf = useMemo(() => sourceLines(a), [a]);
   const headline = useMemo(() => kpis(a, idx.byCell), [a, idx]);
   const primary = v.tables.find((t) => t.period !== 'comparison') ?? v.tables[0];
   const chart = useMemo(
@@ -241,6 +242,20 @@ export function AnswerCard({
           </ul>
         </section>
       ))}
+
+      {sourceLinesOf.length > 0 && (
+        <div className="sources">
+          <span className="eyebrow">{S.sources}</span>
+          <ul>
+            {sourceLinesOf.map((s) => (
+              <li key={s.text}>
+                {s.text}
+                {s.stale && <span className="badge warn"> {S.staleData}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="actions">
         <button type="button" className="ghost" onClick={copy}>

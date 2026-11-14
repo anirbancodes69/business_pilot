@@ -266,3 +266,13 @@ def test_the_answer_endpoint_needs_the_service_token_and_fails_closed() -> None:
         .status_code
         == 401
     )
+
+
+def test_sources_and_freshness_from_the_api_reach_the_answer() -> None:
+    result = tool_result(ROWS)
+    result.sources = [
+        {"data_source_id": "s1", "data_source_name": "Tally export", "entity": "invoice"}
+    ]
+    result.freshness = [{"dataset_id": "d1", "as_of": "2026-11-15T02:30:00Z", "stale": False}]
+    r = answer_question(request(), RID, Scripted(GOOD, good_explainer), FakeTools(result))
+    assert r.sources == result.sources and r.freshness == result.freshness

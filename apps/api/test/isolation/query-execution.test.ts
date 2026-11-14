@@ -162,6 +162,69 @@ async function run(who: 'ownerA' | 'viewerA' | 'ownerB', p: QueryPlan, scopeHash
 }
 const num = (v: unknown) => Number(v);
 
+describe('sources and freshness (E6.3)', () => {
+  const DS = randomUUID();
+  beforeAll(async () => {
+    await f.db.tenantTx(f.A.tenantId, async (tx) => {
+      await tx
+        .insertInto('core.data_source')
+        .values({
+          id: DS,
+          tenant_id: f.A.tenantId,
+          name: 'Tally export',
+          type: 'excel',
+          access_mode: 'managed_sync',
+          connection: '{}',
+          status: 'connected',
+        })
+        .execute();
+      for (const entity of ['invoice', 'customer'])
+        await tx
+          .insertInto('core.dataset')
+          .values({
+            tenant_id: f.A.tenantId,
+            data_source_id: DS,
+            canonical_entity: entity,
+            data_version: 3,
+            status: 'fresh',
+            last_successful_sync_at: new Date(NOW.getTime() - 2 * 3_600_000),
+          })
+          .execute();
+    });
+  });
+
+  it('names the sources of the entities a query read, with when they last synced', async () => {
+    const r = await run('ownerA', plan());
+    expect(r.sources.map((s) => [s.data_source_name, s.entity])).toEqual([
+      ['Tally export', 'customer'],
+      ['Tally export', 'invoice'],
+    ]);
+    expect(r.freshness).toHaveLength(2);
+    expect(r.freshness.every((x) => !x.stale && x.access_mode === 'managed_sync')).toBe(true);
+    expect(r.freshness[0]?.as_of).toBe(new Date(NOW.getTime() - 2 * 3_600_000).toISOString());
+    expect(r.freshness[0]?.dataset_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4/);
+  });
+
+  it('marks a dataset stale after a day, or when its last sync did not succeed', async () => {
+    await f.db.tenantTx(f.A.tenantId, (tx) =>
+      tx
+        .updateTable('core.dataset')
+        .set({ last_successful_sync_at: new Date(NOW.getTime() - 30 * 3_600_000) })
+        .where('canonical_entity', '=', 'invoice')
+        .execute(),
+    );
+    const r = await run('ownerA', plan());
+    const stale = Object.fromEntries(r.sources.map((s, i) => [s.entity, r.freshness[i]?.stale]));
+    expect(stale).toEqual({ customer: false, invoice: true });
+  });
+
+  it("never shows another tenant's sources", async () => {
+    const r = await run('ownerB', plan());
+    expect(r.sources).toEqual([]);
+    expect(r.freshness).toEqual([]);
+  });
+});
+
 describe('plan execution (E6.3)', () => {
   it('answers the headline question with correct figures', async () => {
     const r = await run('ownerA', plan());

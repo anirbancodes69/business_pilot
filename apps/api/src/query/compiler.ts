@@ -38,6 +38,8 @@ export interface CompiledQuery {
   sql: string;
   params: unknown[];
   columns: CompiledColumn[];
+  /** Entities the query reads (the base entity and every joined one), for sources and freshness. */
+  entities: string[];
   /** The limit the caller asked for. The SQL fetches limit + 1 rows to detect truncation. */
   limit: number;
 }
@@ -357,5 +359,5 @@ function compileOne(
   ]
     .filter(Boolean)
     .join('\n');
-  return { role, sql, params, columns, limit };
+  return { role, sql, params, columns, entities: [base, ...joined], limit };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAnswerView, asOfText } from '../src/lib/answer-view';
+import { buildAnswerView, asOfText, sourceLines } from '../src/lib/answer-view';
 import { ConfigError, loadConfig } from '../src/lib/config';
 import { newPkce, authorizeUrl } from '../src/lib/oidc';
 import { sameOrigin } from '../src/lib/origin';
@@ -178,5 +178,35 @@ describe('answer view', () => {
     expect(v.tables[0]?.rows).toEqual([['Asha Traders']]);
     expect(v.asOf).toBe('2026-11-15 04:30 UTC');
     expect(asOfText('garbage')).toBeUndefined();
+  });
+});
+
+describe('sources', () => {
+  const base = { status: 'answered', summary: 's' };
+  it('names each source with what was read and when it last synced', () => {
+    const lines = sourceLines({
+      ...base,
+      sources: [
+        { data_source_id: 'a', data_source_name: 'Tally export', entity: 'invoice' },
+        { data_source_id: 'a', data_source_name: 'Tally export', entity: 'customer' },
+      ],
+      freshness: [
+        { dataset_id: 'x', as_of: '2026-11-15T02:30:00Z' },
+        { dataset_id: 'y', as_of: '2026-11-15T04:10:00Z' },
+      ],
+    });
+    expect(lines).toEqual([
+      { text: 'Tally export · Invoices, Customers · synced 2026-11-15 02:30 UTC', stale: false },
+    ]);
+  });
+
+  it('flags stale data and shows nothing when there is no source information', () => {
+    const stale = sourceLines({
+      ...base,
+      sources: [{ data_source_id: 'a', entity: 'invoice' }],
+      freshness: [{ dataset_id: 'x', as_of: '2026-11-10T00:00:00Z', stale: true }],
+    });
+    expect(stale[0]?.stale).toBe(true);
+    expect(sourceLines(base)).toEqual([]);
   });
 });

@@ -44,6 +44,8 @@ export interface Answer {
   interpretation?: string;
   tables?: AnswerTable[];
   evidence?: Evidence[];
+  sources?: { data_source_id: string; data_source_name?: string; entity: string }[];
+  freshness?: { dataset_id: string; as_of: string; stale?: boolean }[];
   execution?: { plan_hashes?: string[]; semantic_model_version?: number; grounding?: string };
 }
 export interface QuestionResponse {
@@ -71,6 +73,41 @@ export interface AnswerView {
 export function asOfText(iso: string | undefined): string | undefined {
   const m = iso ? /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(iso) : null;
   return m ? `${m[1]} ${m[2]} UTC` : undefined;
+}
+
+export interface SourceLine {
+  text: string;
+  stale: boolean;
+}
+
+const ENTITY_LABEL: Record<string, string> = {
+  invoice: 'Invoices',
+  invoice_line: 'Invoice lines',
+  customer: 'Customers',
+  product: 'Products',
+  branch: 'Branches',
+  payment: 'Payments',
+  payment_allocation: 'Payment allocations',
+};
+
+/** One line per data source: what was read from it, and when it was last synced. */
+export function sourceLines(a: Answer): SourceLine[] {
+  const bySource = new Map<string, { name: string; entities: string[] }>();
+  for (const s of a.sources ?? []) {
+    const e = bySource.get(s.data_source_id) ?? {
+      name: s.data_source_name ?? 'Data source',
+      entities: [],
+    };
+    e.entities.push(ENTITY_LABEL[s.entity] ?? s.entity);
+    bySource.set(s.data_source_id, e);
+  }
+  const times = (a.freshness ?? []).map((f) => f.as_of).sort();
+  const when = asOfText(times[0]);
+  const stale = (a.freshness ?? []).some((f) => f.stale);
+  return [...bySource.values()].map((s) => ({
+    text: `${s.name} · ${s.entities.join(', ')}${when ? ` · synced ${when}` : ''}`,
+    stale,
+  }));
 }
 
 export function buildAnswerView(a: Answer): AnswerView {

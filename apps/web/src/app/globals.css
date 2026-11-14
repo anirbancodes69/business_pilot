@@ -741,6 +741,18 @@ tbody tr:hover {
   color: var(--ink-2);
   font-style: italic;
 }
+.sources {
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+.sources ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.sources .eyebrow {
+  display: block;
+  margin-bottom: 0.15rem;
+}
 .actions {
   display: flex;
   align-items: center;

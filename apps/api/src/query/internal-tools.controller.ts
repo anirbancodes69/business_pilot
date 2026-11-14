@@ -68,7 +68,7 @@ export class InternalToolsController {
         modelVersion: claims.semantic_model_version,
         plan: plan.data,
       });
-      return { ...r, sources: [], freshness: [], cache_hit: false };
+      return { ...r, cache_hit: false };
     } catch (e: unknown) {
       if (e instanceof ContextRejected) throw new ForbiddenException(e.message);
       if (e instanceof PlanRejected)

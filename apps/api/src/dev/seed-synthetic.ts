@@ -36,6 +36,18 @@ export async function seedSynthetic(
   }>`select count(*)::text as n from analytics.branch`.execute(tx);
   if (Number(existing.rows[0]?.n) > 0) throw new Error('this tenant already has analytics data');
   const dataSourceId = randomUUID();
+  await tx
+    .insertInto('core.data_source')
+    .values({
+      id: dataSourceId,
+      tenant_id: tenantId,
+      name: 'Synthetic demo data',
+      type: 'synthetic',
+      access_mode: 'managed_sync',
+      connection: JSON.stringify({ note: 'generated, not a connection' }),
+      status: 'connected',
+    })
+    .execute();
   for (const table of TABLES) {
     const rows: SyntheticRow[] = data[table];
     for (let i = 0; i < rows.length; i += 200) {
@@ -51,6 +63,20 @@ export async function seedSynthetic(
         )}`.execute(tx);
     }
   }
+  for (const table of TABLES)
+    await tx
+      .insertInto('core.dataset')
+      .values({
+        tenant_id: tenantId,
+        data_source_id: dataSourceId,
+        canonical_entity: table,
+        data_version: 1,
+        status: 'fresh',
+        last_attempt_at: new Date(),
+        last_successful_sync_at: new Date(),
+        row_count: data[table].length,
+      })
+      .execute();
   const model = await tx
     .selectFrom('core.semantic_model')
     .select('id')

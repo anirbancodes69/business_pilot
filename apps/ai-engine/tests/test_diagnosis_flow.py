@@ -166,3 +166,19 @@ def test_a_why_question_without_a_comparison_is_a_plain_answer() -> None:
         request(), RID, Scripted(plain, {"summary": "x", "verified_facts": [], "unknowns": []}), api
     )
     assert api.calls == 1  # one ordinary query, no investigation
+
+
+def test_the_investigation_collects_sources_from_every_step_without_repeats() -> None:
+    fake = FakeApi(world())
+    src = {"data_source_id": "s1", "data_source_name": "Tally export", "entity": "invoice"}
+
+    class WithSources(Api):
+        def execute_plan(
+            self, request_context: str, request_id: str, plan: dict[str, Any]
+        ) -> ToolResult:
+            r = super().execute_plan(request_context, request_id, plan)
+            r.sources = [src]
+            return r
+
+    r = answer_question(request(), RID, Scripted(PLAN, good_explainer), WithSources(fake))
+    assert r.sources == [src]

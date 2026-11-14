@@ -25,7 +25,21 @@ export interface ResultSet {
   result_hash: string;
 }
 
+export interface SourceInfo {
+  data_source_id: string;
+  data_source_name: string;
+  entity: string;
+}
+export interface FreshnessInfo {
+  dataset_id: string;
+  as_of: string;
+  access_mode: 'managed_sync' | 'live_federated';
+  stale: boolean;
+}
+
 export interface ExecutionResult {
+  sources: SourceInfo[];
+  freshness: FreshnessInfo[];
   plan_hash: string;
   semantic_model_version: number;
   data_executed_at: string;
@@ -34,6 +48,13 @@ export interface ExecutionResult {
 }
 
 export const STATEMENT_TIMEOUT_MS = 10_000;
+export const STALE_AFTER_MS = 24 * 3_600_000;
+
+/** A dataset has no single id of its own (its key is source and entity), so one is derived. */
+function datasetId(tenantId: string, sourceId: string, entity: string): string {
+  const h = createHash('sha256').update(`${tenantId}:${sourceId}:${entity}`).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
 
 /**
  * Executes one query plan for one user (E6.3). Authorization is reloaded from the database on every
@@ -139,7 +160,11 @@ export class PlanExecutor {
         },
         { readOnly: true, statementTimeoutMs: STATEMENT_TIMEOUT_MS },
       );
+      const entities = [...new Set(queries.flatMap((q) => q.entities))];
+      const { sources, freshness } = await this.provenance(ctx.tenant_id, entities, now);
       return {
+        sources,
+        freshness,
         plan_hash: planHash,
         semantic_model_version: model.version,
         data_executed_at: now.toISOString(),
@@ -150,6 +175,50 @@ export class PlanExecutor {
       if ((e as { code?: string }).code === '57014') throw new PlanTimeout('query timed out');
       throw e;
     }
+  }
+
+  /** Which sources the entities come from and how fresh they are. Read under the tenant's own RLS. */
+  private async provenance(
+    tenantId: string,
+    entities: string[],
+    now: Date,
+  ): Promise<{ sources: SourceInfo[]; freshness: FreshnessInfo[] }> {
+    const rows = await this.db.tenantTx(tenantId, (tx) =>
+      tx
+        .selectFrom('core.dataset as d')
+        .innerJoin('core.data_source as s', (j) =>
+          j.onRef('s.id', '=', 'd.data_source_id').onRef('s.tenant_id', '=', 'd.tenant_id'),
+        )
+        .select([
+          'd.data_source_id',
+          'd.canonical_entity',
+          'd.status',
+          'd.last_successful_sync_at',
+          's.name',
+          's.access_mode',
+        ])
+        .where('d.tenant_id', '=', tenantId)
+        .where('d.canonical_entity', 'in', entities.length ? entities : ['_none'])
+        .orderBy('d.canonical_entity')
+        .execute(),
+    );
+    return {
+      sources: rows.map((r) => ({
+        data_source_id: r.data_source_id,
+        data_source_name: r.name,
+        entity: r.canonical_entity,
+      })),
+      freshness: rows
+        .filter((r) => r.last_successful_sync_at !== null)
+        .map((r) => ({
+          dataset_id: datasetId(tenantId, r.data_source_id, r.canonical_entity),
+          as_of: (r.last_successful_sync_at as Date).toISOString(),
+          access_mode: r.access_mode,
+          stale:
+            r.status !== 'fresh' ||
+            now.getTime() - (r.last_successful_sync_at as Date).getTime() > STALE_AFTER_MS,
+        })),
+    };
   }
 
   private record(

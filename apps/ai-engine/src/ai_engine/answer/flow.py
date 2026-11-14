@@ -261,10 +261,21 @@ def _diagnosis(
         "prompt_versions": versions,
         "model_ids": [],
     }
+    sources: list[dict[str, Any]] = []
+    freshness: list[dict[str, Any]] = []
+    for s in steps:
+        for item in s.result.sources:
+            if item not in sources:
+                sources.append(item)
+        for item in s.result.freshness:
+            if item not in freshness:
+                freshness.append(item)
     base: dict[str, Any] = {
         "request_id": request_id,
         "intent": "diagnostic",
         "execution": execution,
+        "sources": sources,
+        "freshness": freshness,
     }
     f = build_findings(inv, ledger, view)
     if f.table is not None:
