@@ -1,6 +1,6 @@
 # AI evaluation
 
-Not implemented. Required before the AI pipeline is released (Milestone 6).
+**Status (2026-11-15): first version built (Milestone 6, E6.6).** The golden set `apps/ai-engine/evaluation/golden/wholesale_v0.json` has 47 cases (42 active, 5 pending for investigation and follow-ups, which do not exist yet). Two layers: (1) *execution accuracy*, no model: `apps/api/test/isolation/golden-execution.test.ts` runs every active expected plan through the real compiler and PostgreSQL and compares it with an independent oracle (`apps/api/test/golden/oracle.ts`) over the synthetic dataset; (2) *planner accuracy*: `python -m ai_engine.evaluation` (free replay mode checks the set itself; `--real --yes` calls the configured model and costs money). Not built: investigation and follow-up scoring, grounding and provenance metrics over real answers, latency and cost gates, the second tenant, nightly runs and stored results. Follow-up cases (multi-turn, scored on the typed change and the resulting plan) are in the set. The investigation path is covered by engine tests and one live run, not yet by the golden set. Targets below are unchanged and unvalidated. First real-model baseline (planner only, `gpt-6-luna`, prompt v2): 90% plan accuracy on 42 cases; see `apps/ai-engine/evaluation/results/` and [CURRENT.md](../../CURRENT.md).
 
 ## Datasets
 

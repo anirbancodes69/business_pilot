@@ -140,4 +140,37 @@ describe('authorized view', () => {
         expect(json, forbidden).not.toContain(forbidden);
     }
   });
+
+  it('exposes the breakdown measure only when the user can see it', () => {
+    const owner = buildAuthorizedView(model, ctxFor(['owner']));
+    expect(owner.measures.find((m) => m.id === 'revenue')?.breakdown_measure).toBe('line_revenue');
+    const sales = buildAuthorizedView(
+      model,
+      ctxFor(['sales_manager'], { assigned_branch_ids: ['b1'] }),
+    );
+    expect(sales.measures.find((m) => m.id === 'revenue')?.breakdown_measure).toBe('line_revenue');
+    // a user who cannot see line revenue never learns that it exists
+    const noLines = {
+      ...ctxFor(['owner']),
+      granted: { ...ctxFor(['owner']).granted, measures: ['revenue'] },
+    };
+    expect(buildAuthorizedView(model, noLines).measures[0]?.breakdown_measure).toBeUndefined();
+  });
+
+  it('leaves out fields tagged personal or sensitive for the AI model only', () => {
+    const tagged = structuredClone(model);
+    const dim = tagged.dimensions.find((d) => d.id === 'customer.name');
+    if (dim) dim.tags = ['pii'];
+    const gm = tagged.measures.find((m) => m.id === 'gross_margin');
+    if (gm) gm.tags = ['sensitive'];
+    const ctx = ctxFor(['owner']);
+    const forUser = buildAuthorizedView(tagged, ctx);
+    const forAi = buildAuthorizedView(tagged, ctx, { forAi: true });
+    expect(forUser.dimensions.map((d) => d.id)).toContain('customer.name');
+    expect(forAi.dimensions.map((d) => d.id)).not.toContain('customer.name');
+    expect(forAi.measures.map((m) => m.id)).not.toContain('gross_margin');
+    // a ratio built on a sensitive part goes with it; untagged and financial items stay
+    expect(forAi.measures.map((m) => m.id)).not.toContain('gross_margin_pct');
+    expect(forAi.measures.map((m) => m.id)).toContain('revenue');
+  });
 });

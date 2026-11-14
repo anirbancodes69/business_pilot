@@ -1,27 +1,70 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:businesspilot:contracts:ai:answer-response",
-  "x-version": "0.1.0",
+  "x-version": "0.2.0",
   "title": "AnswerResponse",
-  "description": "Structured answer returned by ai-engine to the api. Sections distinguish verified facts, derived calculations, possible explanations, recommendations and unknowns.",
+  "description": "Structured answer returned by ai-engine to the api. Sections distinguish verified facts, derived calculations, possible explanations, recommendations and unknowns. Every number shown is backed by one entry in `evidence` (D-22); conversation state is a typed `analytical_context` (D-21).",
   "type": "object",
   "additionalProperties": false,
-  "required": ["request_id", "status", "intent", "summary", "verified_facts", "sources", "freshness", "execution"],
+  "required": [
+    "request_id",
+    "status",
+    "intent",
+    "summary",
+    "verified_facts",
+    "evidence",
+    "sources",
+    "freshness",
+    "execution"
+  ],
   "properties": {
-    "request_id": { "type": "string", "format": "uuid" },
-    "status": { "enum": ["answered", "answered_facts_only", "clarification_needed", "not_authorized", "out_of_scope", "failed"] },
-    "intent": { "type": "string" },
-    "summary": { "type": "string", "maxLength": 1200 },
+    "request_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "enum": [
+        "answered",
+        "answered_facts_only",
+        "clarification_needed",
+        "not_authorized",
+        "out_of_scope",
+        "failed"
+      ]
+    },
+    "intent": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 1200,
+      "description": "Final text, with evidence placeholders already rendered into numbers by code in the tenant's number format."
+    },
     "verified_facts": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["statement", "result_set_id"],
+        "required": [
+          "statement",
+          "result_set_id",
+          "evidence_ids"
+        ],
         "properties": {
-          "statement": { "type": "string" },
-          "result_set_id": { "type": "string" },
-          "values": { "type": "array", "items": { "type": ["number", "string"] } }
+          "statement": {
+            "type": "string"
+          },
+          "result_set_id": {
+            "type": "string"
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^ev_[a-z0-9]{4,16}$"
+            },
+            "uniqueItems": true
+          }
         }
       }
     },
@@ -30,37 +73,193 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["label", "value", "formula", "inputs"],
+        "required": [
+          "label",
+          "evidence_id"
+        ],
         "properties": {
-          "label": { "type": "string" },
-          "value": { "type": "number" },
-          "unit": { "type": "string" },
-          "formula": { "type": "string", "description": "e.g. (current - previous) / previous" },
-          "inputs": { "type": "array", "items": { "type": "string" }, "description": "References to result_set_id:column:row values" }
+          "label": {
+            "type": "string"
+          },
+          "evidence_id": {
+            "type": "string",
+            "pattern": "^ev_[a-z0-9]{4,16}$"
+          }
         }
       }
     },
-    "possible_explanations": { "type": "array", "items": { "type": "string" } },
-    "recommendations": { "type": "array", "items": { "type": "string" } },
-    "unknowns": { "type": "array", "items": { "type": "string" } },
-    "clarification_question": { "type": "string" },
-    "conversation_summary": { "type": "string", "maxLength": 2000, "description": "Updated running summary (intents and plan descriptions, no result rows). Stored by the api and sent back on the next turn." },
+    "possible_explanations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^ev_[a-z0-9]{4,16}$"
+            },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "playbook_id",
+          "evidence_ids"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "playbook_id": {
+            "type": "string"
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^ev_[a-z0-9]{4,16}$"
+            },
+            "uniqueItems": true,
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "clarification_question": {
+      "type": "string"
+    },
     "tables": {
       "type": "array",
-      "description": "Result tables for UI rendering (from verified result sets).",
-      "items": { "type": "object", "required": ["result_set_id"], "properties": { "result_set_id": { "type": "string" }, "title": { "type": "string" } } }
+      "description": "Result tables for the UI, from verified result sets. Cells are display strings already rendered by code (numbers from the evidence ledger); the UI shows them as text.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "result_set_id",
+          "title",
+          "columns",
+          "rows"
+        ],
+        "properties": {
+          "result_set_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "period": {
+            "enum": [
+              "current",
+              "comparison"
+            ]
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the api ran the query."
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "semantic_id",
+                "label",
+                "kind"
+              ],
+              "properties": {
+                "semantic_id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "dimension",
+                    "measure"
+                  ]
+                }
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "cell_evidence": {
+            "type": "array",
+            "description": "Evidence id of each displayed figure, parallel to `rows` (null for text cells). Lets the UI show where a figure comes from.",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
     },
     "sources": {
       "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["data_source_id", "entity"],
+        "required": [
+          "data_source_id",
+          "entity"
+        ],
         "properties": {
-          "data_source_id": { "type": "string", "format": "uuid" },
-          "data_source_name": { "type": "string" },
-          "entity": { "type": "string" },
-          "document_ref": { "type": "string" }
+          "data_source_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data_source_name": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "document_ref": {
+            "type": "string"
+          }
         }
       }
     },
@@ -69,34 +268,431 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["dataset_id", "as_of"],
+        "required": [
+          "dataset_id",
+          "as_of"
+        ],
         "properties": {
-          "dataset_id": { "type": "string", "format": "uuid" },
-          "as_of": { "type": "string", "format": "date-time" },
-          "access_mode": { "enum": ["managed_sync", "live_federated"] },
-          "stale": { "type": "boolean" }
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "access_mode": {
+            "enum": [
+              "managed_sync",
+              "live_federated"
+            ]
+          },
+          "stale": {
+            "type": "boolean"
+          }
         }
       }
     },
     "execution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["plan_hashes", "grounding", "semantic_model_version"],
+      "required": [
+        "plan_hashes",
+        "grounding",
+        "semantic_model_version"
+      ],
       "properties": {
-        "plan_hashes": { "type": "array", "items": { "type": "string" } },
-        "semantic_model_version": { "type": "integer" },
-        "grounding": { "enum": ["passed", "passed_after_regeneration", "failed_degraded", "not_applicable"] },
+        "plan_hashes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "semantic_model_version": {
+          "type": "integer"
+        },
+        "grounding": {
+          "enum": [
+            "passed",
+            "passed_after_regeneration",
+            "failed_degraded",
+            "not_applicable"
+          ]
+        },
         "cache": {
           "type": "object",
           "properties": {
-            "semantic_plan_hit": { "type": "boolean" },
-            "exact_result_hits": { "type": "integer" }
+            "semantic_plan_hit": {
+              "type": "boolean"
+            },
+            "exact_result_hits": {
+              "type": "integer"
+            }
           }
         },
-        "tool_calls": { "type": "integer" },
-        "prompt_versions": { "type": "object", "additionalProperties": { "type": "string" } },
-        "model_ids": { "type": "array", "items": { "type": "string" } }
+        "tool_calls": {
+          "type": "integer"
+        },
+        "prompt_versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "model_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "usage": {
+          "type": "object",
+          "description": "Model usage for this answer (E6.8). Counts only; no prompt or reply text.",
+          "additionalProperties": false,
+          "required": [
+            "planner",
+            "explainer"
+          ],
+          "properties": {
+            "planner": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "calls",
+                "input_tokens",
+                "output_tokens"
+              ],
+              "properties": {
+                "calls": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "input_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "output_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            },
+            "explainer": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "calls",
+                "input_tokens",
+                "output_tokens"
+              ],
+              "properties": {
+                "calls": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "input_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "output_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Time ai-engine spent on the answer, including the api tool call."
+        }
       }
+    },
+    "analytical_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semantic_model_version",
+        "turn"
+      ],
+      "description": "Typed conversation state (D-21). Semantic IDs, relative time tokens, filter values and evidence references only: no rows, no figures, no question text. The api stores it per turn and re-validates it against the user's current authorized view before sending it back. Never a source of authority.",
+      "properties": {
+        "semantic_model_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "turn": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "focus": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "metrics": {
+              "type": "array",
+              "maxItems": 5,
+              "items": {
+                "type": "string"
+              }
+            },
+            "dimensions": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "string"
+              }
+            },
+            "filters": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "dimension",
+                  "operator",
+                  "values"
+                ],
+                "properties": {
+                  "dimension": {
+                    "type": "string"
+                  },
+                  "operator": {
+                    "enum": [
+                      "eq",
+                      "neq",
+                      "in",
+                      "not_in",
+                      "gt",
+                      "gte",
+                      "lt",
+                      "lte",
+                      "between"
+                    ]
+                  },
+                  "values": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "items": {
+                      "type": [
+                        "string",
+                        "number",
+                        "boolean"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "time_range": {
+              "type": "object"
+            },
+            "comparison": {
+              "type": "object"
+            },
+            "time_grains": {
+              "type": "object",
+              "description": "Time grain of each time dimension in `dimensions`.",
+              "additionalProperties": {
+                "enum": [
+                  "day",
+                  "week",
+                  "month",
+                  "quarter",
+                  "fiscal_quarter",
+                  "year",
+                  "fiscal_year"
+                ]
+              }
+            },
+            "sort": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "by",
+                  "direction"
+                ],
+                "properties": {
+                  "by": {
+                    "type": "string"
+                  },
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                }
+              }
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "last_analysis_type": {
+          "type": "string"
+        },
+        "open_hypotheses": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "status"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "open",
+                  "supported",
+                  "not_testable",
+                  "rejected"
+                ]
+              }
+            }
+          }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ev_[a-z0-9]{4,16}$"
+          },
+          "uniqueItems": true,
+          "maxItems": 50
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Evidence ledger: exactly one record per number shown (D-22). Values are those already shown to the authorized user.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "value",
+          "display"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^ev_[a-z0-9]{4,16}$"
+          },
+          "kind": {
+            "enum": [
+              "result",
+              "derived",
+              "config"
+            ]
+          },
+          "value": {
+            "type": "number"
+          },
+          "display": {
+            "type": "string",
+            "description": "The rendered text, for example 12.5 lakh"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "result": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "result_set_id",
+              "column",
+              "row",
+              "plan_hash"
+            ],
+            "properties": {
+              "result_set_id": {
+                "type": "string"
+              },
+              "column": {
+                "type": "string"
+              },
+              "row": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "plan_hash": {
+                "type": "string"
+              },
+              "semantic_model_version": {
+                "type": "integer"
+              },
+              "executed_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "derived": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "formula_id",
+              "input_ids"
+            ],
+            "properties": {
+              "formula_id": {
+                "enum": [
+                  "pct_change",
+                  "abs_change",
+                  "share_of_total",
+                  "contribution_to_delta",
+                  "sum_of_changes",
+                  "one_period_change",
+                  "sum_of_values"
+                ]
+              },
+              "input_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            }
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rule_id",
+              "semantic_model_version"
+            ],
+            "properties": {
+              "rule_id": {
+                "type": "string"
+              },
+              "semantic_model_version": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    },
+    "interpretation": {
+      "type": "string",
+      "maxLength": 400,
+      "description": "How the question was understood, in plain words and built by code from the executed plan (for example: Revenue by branch, 1 Oct 2026 to 31 Oct 2026, branch is Nashik). Shown to the user so assumptions are visible."
     }
   }
 }

@@ -1,0 +1,257 @@
+{
+ "semantic_model_version": 1,
+ "tenant_settings": {
+  "currency": "INR",
+  "timezone": "Asia/Kolkata",
+  "fiscal_year_start_month": 4,
+  "number_format": "indian"
+ },
+ "business_rules": [
+  {
+   "id": "overdue_days",
+   "label": "Receivable is overdue after",
+   "value": 0,
+   "unit": "days"
+  },
+  {
+   "id": "slow_moving_days",
+   "label": "Stock is slow moving after",
+   "value": 120,
+   "unit": "days"
+  }
+ ],
+ "entities": [
+  {
+   "id": "customer",
+   "label": "Customer",
+   "synonyms": [
+    "party",
+    "client",
+    "retailer"
+   ]
+  },
+  {
+   "id": "product",
+   "label": "Product",
+   "synonyms": [
+    "item",
+    "sku"
+   ]
+  },
+  {
+   "id": "branch",
+   "label": "Branch",
+   "synonyms": [
+    "location",
+    "depot"
+   ]
+  },
+  {
+   "id": "invoice",
+   "label": "Invoice",
+   "synonyms": [
+    "bill",
+    "sale"
+   ]
+  },
+  {
+   "id": "invoice_line",
+   "label": "Invoice line",
+   "synonyms": [
+    "line item"
+   ]
+  }
+ ],
+ "measures": [
+  {
+   "id": "revenue",
+   "entity": "invoice",
+   "label": "Revenue",
+   "unit": "currency",
+   "synonyms": [
+    "sales",
+    "turnover"
+   ],
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better",
+   "business_definition": "Invoice net amount as synced from the source. Whether it includes tax depends on the source mapping.",
+   "valid_dimensions": [
+    "invoice.invoice_date",
+    "branch.name",
+    "branch.state",
+    "customer.name",
+    "customer.segment",
+    "customer.city",
+    "invoice.status"
+   ],
+   "breakdown_measure": "line_revenue"
+  },
+  {
+   "id": "invoice_count",
+   "entity": "invoice",
+   "label": "Invoice count",
+   "unit": "count",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "average_order_value",
+   "entity": "invoice",
+   "label": "Average order value",
+   "unit": "currency",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "ratio",
+   "additivity": "non_additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "line_revenue",
+   "entity": "invoice_line",
+   "label": "Line revenue",
+   "unit": "currency",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better",
+   "valid_dimensions": [
+    "invoice.invoice_date",
+    "product.category",
+    "product.sub_category",
+    "product.name",
+    "product.brand",
+    "branch.name",
+    "customer.name"
+   ],
+   "drivers": [
+    {
+     "components": [
+      "units_sold",
+      "average_selling_price"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "units_sold",
+   "entity": "invoice_line",
+   "label": "Units sold",
+   "unit": "quantity",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "average_selling_price",
+   "entity": "invoice_line",
+   "label": "Average selling price",
+   "unit": "currency",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "ratio",
+   "additivity": "non_additive",
+   "polarity": "higher_is_better"
+  }
+ ],
+ "dimensions": [
+  {
+   "id": "invoice.invoice_date",
+   "label": "Invoice date",
+   "type": "time"
+  },
+  {
+   "id": "invoice.status",
+   "label": "Invoice status",
+   "type": "categorical"
+  },
+  {
+   "id": "branch.state",
+   "label": "State",
+   "type": "categorical",
+   "hierarchy": {
+    "name": "geography",
+    "level": 1
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "branch.name",
+   "label": "Branch",
+   "type": "categorical",
+   "synonyms": [
+    "location"
+   ],
+   "hierarchy": {
+    "name": "geography",
+    "level": 2
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "customer.name",
+   "label": "Customer",
+   "type": "categorical",
+   "synonyms": [
+    "party"
+   ],
+   "diagnostic": true
+  },
+  {
+   "id": "customer.segment",
+   "label": "Customer segment",
+   "type": "categorical",
+   "diagnostic": true
+  },
+  {
+   "id": "customer.city",
+   "label": "Customer city",
+   "type": "categorical"
+  },
+  {
+   "id": "product.category",
+   "label": "Product category",
+   "type": "categorical",
+   "hierarchy": {
+    "name": "product",
+    "level": 1
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "product.sub_category",
+   "label": "Product sub-category",
+   "type": "categorical",
+   "hierarchy": {
+    "name": "product",
+    "level": 2
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "product.name",
+   "label": "Product",
+   "type": "categorical",
+   "hierarchy": {
+    "name": "product",
+    "level": 3
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "product.brand",
+   "label": "Brand",
+   "type": "categorical",
+   "diagnostic": true
+  }
+ ],
+ "glossary": [
+  {
+   "term": "sales",
+   "definition": "Net invoiced amount",
+   "maps_to": "measure:revenue"
+  }
+ ]
+}

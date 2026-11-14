@@ -344,6 +344,11 @@
           "certified": {
             "type": "boolean",
             "default": false
+          },
+          "breakdown_measure": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "description": "Another measure to use when an investigation breaks this one down by a dimension it does not support (for example revenue by product, through line revenue). It is an approximation and the answer says so. Same unit, different entity."
           }
         }
       }

@@ -6,6 +6,10 @@ Use AI coding assistants efficiently while minimizing unnecessary token consumpt
 
 This workflow applies to Claude Code and other AI coding assistants.
 
+## Real model calls cost money (from 2026-11-15)
+
+The product owner's local `.env` now holds a real OpenAI key (ADR-0019). Rules for every AI coding session: automated tests never call a model (mock the HTTP transport or use the dummy provider; `apps/ai-engine/tests/conftest.py` removes the `LLM_*` variables from every test run). Make a real call only when a mock cannot show what is needed, with a tiny synthetic prompt, a low `max_output_tokens` and one call per question, never in a loop. Never print or log the key. Never send real customer data.
+
 ## 2. Model Selection
 
 Use models according to task complexity:

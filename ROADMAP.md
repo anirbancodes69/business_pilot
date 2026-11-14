@@ -4,7 +4,7 @@ Ordering principle: reach a **working vertical slice** fast. The slice is one pi
 
 Where a later milestone's items are needed by the slice, a thin version is pulled forward, and each milestone says what it defers.
 
-Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestone 5 **Implemented at API level on branch `feature/m5-sync-engine`, not merged** (the sync UI moved to M9); Milestones 6 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
+Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestone 5 **Merged to `main` (PR #8), implemented at API level** (the sync UI moved to M9); Milestone 6 **Built on branch `feature/m6-ai-orchestration`, pending the product owner's browser review, CI and merge** (E6.0 to E6.9 all implemented in a first version; the acceptance review is in [CURRENT.md](CURRENT.md)); Milestones 7 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
 
 ---
 
@@ -83,7 +83,7 @@ Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`
 
 **Epics**
 
-- E6.0 Decide D-OPEN-19, -20, -21 and -23 (investigation, conversation state, provenance, recommendations; [ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md) to [ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)) before E6.2. The scope of E6.2, E6.4 and E6.9 follows those decisions.
+- E6.0 ~~Decide D-OPEN-19, -20, -21 and -23~~ Decided 2026-11-14 as D-20 to D-23 ([ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md) to [ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md), [ADR-0018](docs/adr/ADR-0018-evidence-based-recommendations.md)). The `answer-response` 0.2.0 contract is done. The scope of E6.2, E6.4 and E6.9 follows those decisions.
 - E6.1 Confirm D-OPEN-01 (LLM provider) using a small evaluation spike.
 - E6.2 ai-engine pipeline stages 1–11 ([AI_ENGINEERING.md](AI_ENGINEERING.md#2-pipeline)), including the deterministic time resolver (P-17). Context retrieval is lexical only (no vectors until M7), and there is no semantic cache yet.
 - E6.3 API internal tools: `execute-plan` (plan validation, ABAC injection, SQL compiler, read-only execution, audit) with signed RequestContext.

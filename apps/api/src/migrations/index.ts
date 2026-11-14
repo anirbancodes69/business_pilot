@@ -9,6 +9,10 @@ import * as m0007 from './0007_uploads_and_objects';
 import * as m0008 from './0008_entity_mapping';
 import * as m0009 from './0009_sync';
 import * as m0010 from './0010_notifications_and_outbox_retention';
+import * as m0011 from './0011_conversations';
+import * as m0012 from './0012_ai_execution';
+import * as m0013 from './0013_conversation_history';
+import * as m0014 from './0014_ai_processing_consent';
 
 // Forward-only migrations (ADR-0009). Names sort in application order. No down migrations.
 const migrations: Record<string, Migration> = {
@@ -22,6 +26,10 @@ const migrations: Record<string, Migration> = {
   '0008_entity_mapping': { up: m0008.up },
   '0009_sync': { up: m0009.up },
   '0010_notifications_and_outbox_retention': { up: m0010.up },
+  '0011_conversations': { up: m0011.up },
+  '0012_ai_execution': { up: m0012.up },
+  '0013_conversation_history': { up: m0013.up },
+  '0014_ai_processing_consent': { up: m0014.up },
 };
 
 export const migrationProvider: MigrationProvider = {

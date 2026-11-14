@@ -36,7 +36,7 @@ In the orchestrator design, stages 5–8 form the **investigation** phase. For d
 
 A deterministic state machine in ai-engine: **understand → plan → investigate (bounded loop) → diagnose → recommend → explain and ground**. Every data access is a `QueryPlan` that the api re-authorizes, compiles and executes. The orchestrator only reasons over findings computed in code from authorized results. The LLM is used for intent understanding, plan drafting, narrative and recommendation wording, always schema-constrained and validated. Full design, including the step catalog, budget, stop rules and the split of responsibilities with the api: [docs/ai/analyst-orchestrator.md](docs/ai/analyst-orchestrator.md).
 
-OPEN decisions that shape it: adaptive step selection ([ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md)), structured conversation state ([ADR-0011](docs/adr/ADR-0011-analytical-conversation-state.md)), the evidence model ([ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)), semantic model v1 ([ADR-0013](docs/adr/ADR-0013-semantic-model-v1.md)) and recommendation generation (D-OPEN-23).
+Decisions that shape it (all accepted 2026-11-14): adaptive step selection, with rules choosing the step (D-20, [ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md)), structured conversation state (D-21, [ADR-0011](docs/adr/ADR-0011-analytical-conversation-state.md)), the evidence model (D-22, [ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)), semantic model v1 ([ADR-0013](docs/adr/ADR-0013-semantic-model-v1.md)) and recommendation generation (D-23, [ADR-0018](docs/adr/ADR-0018-evidence-based-recommendations.md)).
 
 ## 3. Semantic layer
 
@@ -57,7 +57,7 @@ Every answer has typed sections: `verified_facts`, `derived_calculations` (each 
 
 **Provenance rule (strict).** Every number shown has exactly one origin: an api result cell (`result`), a code-registry calculation with its input evidence (`derived`), or a tenant configuration value (`config`). Hypotheses state whether the data supports or contradicts them, or whether they cannot be tested with the connected data. Every recommendation cites at least one finding. An answer that violates any of this is regenerated once and then reduced to verified facts. The evidence ledger design is OPEN ([ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)).
 
-**Conversation state.** The current contract carries a free-text `conversation_summary`. The target is a typed `AnalyticalContext` (focus metrics, dimensions, filters, relative time range, open hypotheses, evidence references; no figures or rows). The api re-validates it against the user's authorized view on every turn, and follow-ups are applied as typed deltas ([ADR-0011](docs/adr/ADR-0011-analytical-conversation-state.md), OPEN).
+**Conversation state.** `AnswerResponse` 0.2.0 carries a typed `analytical_context` (focus metrics, dimensions, filters, relative time range, open hypotheses, evidence references; no figures or rows), decided in D-21. The api re-validates it against the user's authorized view on every turn and never treats it as authority. The ai-engine does not read it yet (the orchestrator is not built).
 
 ## 5. Caching
 

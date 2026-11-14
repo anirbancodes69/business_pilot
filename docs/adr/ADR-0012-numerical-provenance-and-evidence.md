@@ -1,6 +1,6 @@
 # ADR-0012: Numerical provenance and evidence model
 
-- **Status:** OPEN (awaiting product-owner decision)
+- **Status:** Accepted 2026-11-14 as D-22 (option A: evidence placeholders rendered by code)
 - **Date:** 2026-11-13
 - **Decision items:** D-OPEN-21
 

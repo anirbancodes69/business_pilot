@@ -16,6 +16,13 @@ export interface TenantTable {
   template_id: string | null;
   key_id: string | null;
   wrapped_data_key: Buffer | null;
+  ai_processing_enabled: Generated<boolean>;
+  ai_processing_changed_at: ColumnType<
+    Date | null,
+    Date | string | undefined,
+    Date | string | null
+  >;
+  ai_processing_changed_by: string | null;
   created_at: Generated<Date>;
 }
 
@@ -225,7 +232,47 @@ export interface NotificationTable {
   read_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
 }
 
+export interface ConversationTable {
+  tenant_id: string;
+  id: Generated<string>;
+  user_id: string;
+  created_at: Generated<Date>;
+}
+
+export interface ConversationTurnTable {
+  tenant_id: string;
+  conversation_id: string;
+  turn: number;
+  analytical_context: Json;
+  question: string | null;
+  answer: ColumnType<unknown, string | null | undefined, string | null>;
+  status: string;
+  plan_hashes: ColumnType<unknown, string | undefined, string>;
+  created_at: Generated<Date>;
+}
+
+export interface AiExecutionTable {
+  tenant_id: string;
+  id: Generated<string>;
+  user_id: string;
+  conversation_id: string;
+  turn: number;
+  request_id: string;
+  status: string;
+  grounding: string | null;
+  planner_calls: number;
+  explainer_calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  model_ids: ColumnType<unknown, string | undefined, string>;
+  duration_ms: number | null;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
+  'core.conversation': ConversationTable;
+  'core.conversation_turn': ConversationTurnTable;
+  'core.ai_execution': AiExecutionTable;
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
   'core.permission': PermissionTable;

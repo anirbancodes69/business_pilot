@@ -1,4 +1,4 @@
-import { type Kysely, type Transaction, sql } from 'kysely';
+import { CompiledQuery, type Kysely, type Transaction, sql } from 'kysely';
 import type { Database } from './schema';
 
 export type Tx = Transaction<Database>;
@@ -63,4 +63,14 @@ async function applyOptions(tx: Tx, options: TxOptions): Promise<void> {
     if (!Number.isFinite(ms) || ms <= 0) throw new Error('invalid statement timeout');
     await sql`select set_config('statement_timeout', ${String(ms)}, true)`.execute(tx);
   }
+}
+
+/** Runs SQL text with bound parameters. Only for text produced by the plan compiler (src/query). */
+export async function rawRows(
+  tx: Tx,
+  text: string,
+  params: unknown[],
+): Promise<Record<string, unknown>[]> {
+  const result = await tx.executeQuery<Record<string, unknown>>(CompiledQuery.raw(text, params));
+  return result.rows;
 }

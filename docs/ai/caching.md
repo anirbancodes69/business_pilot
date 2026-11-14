@@ -1,6 +1,6 @@
 # Caching — detailed design
 
-Decision: [ADR-0007](../adr/ADR-0007-caching-strategy.md). Policy schema: [schemas/configuration/cache-policy.schema.json](../../schemas/configuration/cache-policy.schema.json). Not implemented.
+Decision: [ADR-0007](../adr/ADR-0007-caching-strategy.md). Policy schema: [schemas/configuration/cache-policy.schema.json](../../schemas/configuration/cache-policy.schema.json). **Status (2026-11-15):** the exact application cache (§2) is implemented (E6.7); provider prompt caching (§1), the semantic plan cache (§3) and per-tenant cache policy and admin controls are not.
 
 ## 1. Provider prompt caching
 
@@ -29,6 +29,10 @@ value = {result_sets, sources, freshness, created_at, compiler_version}
 - **Read:** in the api's `execute-plan`, *after* authorization re-checks (a cache hit never skips authorization).
 - **Invalidation:** structural. Any sync that changes a dataset bumps `data_version`, so new keys differ. Publishing a semantic model or policy changes their versions. TTL (default 24 h for managed sync) bounds memory and covers missed bumps.
 - **Live/federated sources:** disabled by default. If enabled, `data_version` is replaced by a time bucket and the TTL is short (for example 5 minutes).
+
+### Implementation notes (E6.7)
+
+`apps/api/src/platform/cache/result-cache.ts` (store port: Redis, in-memory, none) and `apps/api/src/query/plan-executor.ts`. The Redis key is `t:{tenant_id}:qc:{hash}`; the hash covers the cache policy version, the compiler version, tenant, `authz_scope_hash`, the normalized plan (measures and filter values sorted, wording dropped), the semantic model version, the `dataset_id:data_version` of every dataset read, and the as-of date (figures such as overdue depend on today). It is read after the authorization re-check and never skips it. Not cached: plans touching `pii` or `sensitive` fields, live (federated) sources, results above 1 MB, and a tenant without a working Redis (an error is a miss). A hit returns the original `data_executed_at`, recomputes sources and freshness, and is reported as `execution.cache.exact_result_hits`. TTL default 24 hours (`RESULT_CACHE_TTL_SECONDS`), `RESULT_CACHE_ENABLED` to switch off. Not done: per-tenant memory budget (Redis runs with `noeviction`, so only the TTL and the size cap bound it), per-tenant cache policy, cache metrics, and removal of a tenant's keys on deletion (the prefix makes it possible).
 
 ## 3. Semantic plan cache
 

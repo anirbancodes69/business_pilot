@@ -1,0 +1,260 @@
+{
+ "summary": {
+  "total": 17,
+  "passed": 16,
+  "pending": 5,
+  "by_category": {
+   "adversarial": [
+    2,
+    3
+   ],
+   "filter": [
+    5,
+    5
+   ],
+   "metric": [
+    8,
+    8
+   ],
+   "ranking": [
+    1,
+    1
+   ]
+  },
+  "plan_accuracy": 0.9411764705882353,
+  "intent_accuracy": 0.9375,
+  "input_tokens": 22673,
+  "output_tokens": 3272,
+  "llm_calls": 17
+ },
+ "results": [
+  {
+   "id": "met-001",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1362,
+   "output_tokens": 111
+  },
+  {
+   "id": "met-002",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1364,
+   "output_tokens": 153
+  },
+  {
+   "id": "met-003",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1362,
+   "output_tokens": 119
+  },
+  {
+   "id": "met-004",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1365,
+   "output_tokens": 142
+  },
+  {
+   "id": "met-005",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1364,
+   "output_tokens": 186
+  },
+  {
+   "id": "met-006",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1365,
+   "output_tokens": 107
+  },
+  {
+   "id": "met-007",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1363,
+   "output_tokens": 152
+  },
+  {
+   "id": "met-008",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1365,
+   "output_tokens": 113
+  },
+  {
+   "id": "rank-003",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": false,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1362,
+   "output_tokens": 412
+  },
+  {
+   "id": "flt-001",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1363,
+   "output_tokens": 150
+  },
+  {
+   "id": "flt-002",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1367,
+   "output_tokens": 300
+  },
+  {
+   "id": "flt-003",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1363,
+   "output_tokens": 148
+  },
+  {
+   "id": "flt-004",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1365,
+   "output_tokens": 173
+  },
+  {
+   "id": "flt-005",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1365,
+   "output_tokens": 289
+  },
+  {
+   "id": "adv-001",
+   "category": "adversarial",
+   "outcome": "clarify",
+   "ok": false,
+   "intent_ok": null,
+   "problems": [
+    "wanted a plan, got clarify: "
+   ],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1106,
+   "output_tokens": 436
+  },
+  {
+   "id": "adv-002",
+   "category": "adversarial",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1100,
+   "output_tokens": 160
+  },
+  {
+   "id": "adv-005",
+   "category": "adversarial",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "repaired_from": [],
+   "actual_plan": null,
+   "llm_calls": 1,
+   "input_tokens": 1372,
+   "output_tokens": 121
+  }
+ ],
+ "meta": {
+  "prompt": "planner-v3",
+  "scope": "the 17 cases that failed or needed a repair under v2 (tuned on these, so not an independent measure)",
+  "model": "gpt-6-luna"
+ }
+}

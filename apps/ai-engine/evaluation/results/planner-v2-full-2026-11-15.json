@@ -1,0 +1,523 @@
+{
+ "summary": {
+  "total": 42,
+  "passed": 38,
+  "pending": 5,
+  "by_category": {
+   "adversarial": [
+    4,
+    5
+   ],
+   "clarify": [
+    3,
+    3
+   ],
+   "comparison": [
+    6,
+    6
+   ],
+   "filter": [
+    2,
+    5
+   ],
+   "metric": [
+    8,
+    8
+   ],
+   "out_of_scope": [
+    3,
+    3
+   ],
+   "ranking": [
+    8,
+    8
+   ],
+   "trend": [
+    4,
+    4
+   ]
+  },
+  "plan_accuracy": 0.9047619047619048,
+  "intent_accuracy": 0.9411764705882353,
+  "input_tokens": 70749,
+  "output_tokens": 8489,
+  "llm_calls": 58
+ },
+ "results": [
+  {
+   "id": "met-001",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2500,
+   "output_tokens": 222
+  },
+  {
+   "id": "met-002",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2504,
+   "output_tokens": 281
+  },
+  {
+   "id": "met-003",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2500,
+   "output_tokens": 275
+  },
+  {
+   "id": "met-004",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2506,
+   "output_tokens": 238
+  },
+  {
+   "id": "met-005",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2504,
+   "output_tokens": 336
+  },
+  {
+   "id": "met-006",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2506,
+   "output_tokens": 182
+  },
+  {
+   "id": "met-007",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2502,
+   "output_tokens": 229
+  },
+  {
+   "id": "met-008",
+   "category": "metric",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2506,
+   "output_tokens": 214
+  },
+  {
+   "id": "rank-001",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1229,
+   "output_tokens": 264
+  },
+  {
+   "id": "rank-002",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1231,
+   "output_tokens": 138
+  },
+  {
+   "id": "rank-003",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": false,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2500,
+   "output_tokens": 248
+  },
+  {
+   "id": "rank-004",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1230,
+   "output_tokens": 130
+  },
+  {
+   "id": "rank-005",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1229,
+   "output_tokens": 184
+  },
+  {
+   "id": "rank-006",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1231,
+   "output_tokens": 180
+  },
+  {
+   "id": "rank-007",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1231,
+   "output_tokens": 205
+  },
+  {
+   "id": "rank-008",
+   "category": "ranking",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1232,
+   "output_tokens": 198
+  },
+  {
+   "id": "cmp-001",
+   "category": "comparison",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1230,
+   "output_tokens": 177
+  },
+  {
+   "id": "cmp-002",
+   "category": "comparison",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1231,
+   "output_tokens": 130
+  },
+  {
+   "id": "cmp-003",
+   "category": "comparison",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1232,
+   "output_tokens": 109
+  },
+  {
+   "id": "cmp-004",
+   "category": "comparison",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1228,
+   "output_tokens": 210
+  },
+  {
+   "id": "cmp-005",
+   "category": "comparison",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1236,
+   "output_tokens": 186
+  },
+  {
+   "id": "cmp-006",
+   "category": "comparison",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1231,
+   "output_tokens": 132
+  },
+  {
+   "id": "trd-001",
+   "category": "trend",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1229,
+   "output_tokens": 138
+  },
+  {
+   "id": "trd-002",
+   "category": "trend",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1233,
+   "output_tokens": 133
+  },
+  {
+   "id": "trd-003",
+   "category": "trend",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1227,
+   "output_tokens": 231
+  },
+  {
+   "id": "trd-004",
+   "category": "trend",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1230,
+   "output_tokens": 177
+  },
+  {
+   "id": "flt-001",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": false,
+   "intent_ok": true,
+   "problems": [
+    "filters differ"
+   ],
+   "llm_calls": 2,
+   "input_tokens": 2502,
+   "output_tokens": 426
+  },
+  {
+   "id": "flt-002",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2510,
+   "output_tokens": 673
+  },
+  {
+   "id": "flt-003",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2502,
+   "output_tokens": 285
+  },
+  {
+   "id": "flt-004",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": false,
+   "intent_ok": true,
+   "problems": [
+    "dimensions: wanted [], got ['customer.name']"
+   ],
+   "llm_calls": 2,
+   "input_tokens": 2506,
+   "output_tokens": 291
+  },
+  {
+   "id": "flt-005",
+   "category": "filter",
+   "outcome": "plan",
+   "ok": false,
+   "intent_ok": true,
+   "problems": [
+    "filters differ"
+   ],
+   "llm_calls": 1,
+   "input_tokens": 1231,
+   "output_tokens": 216
+  },
+  {
+   "id": "clr-001",
+   "category": "clarify",
+   "outcome": "clarify",
+   "ok": true,
+   "intent_ok": null,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1226,
+   "output_tokens": 65
+  },
+  {
+   "id": "clr-002",
+   "category": "clarify",
+   "outcome": "clarify",
+   "ok": true,
+   "intent_ok": null,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1226,
+   "output_tokens": 60
+  },
+  {
+   "id": "clr-003",
+   "category": "clarify",
+   "outcome": "clarify",
+   "ok": true,
+   "intent_ok": null,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1226,
+   "output_tokens": 75
+  },
+  {
+   "id": "oos-001",
+   "category": "out_of_scope",
+   "outcome": "out_of_scope",
+   "ok": true,
+   "intent_ok": null,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1228,
+   "output_tokens": 14
+  },
+  {
+   "id": "oos-002",
+   "category": "out_of_scope",
+   "outcome": "out_of_scope",
+   "ok": true,
+   "intent_ok": null,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1228,
+   "output_tokens": 14
+  },
+  {
+   "id": "oos-003",
+   "category": "out_of_scope",
+   "outcome": "out_of_scope",
+   "ok": true,
+   "intent_ok": null,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1230,
+   "output_tokens": 14
+  },
+  {
+   "id": "adv-001",
+   "category": "adversarial",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": false,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 1988,
+   "output_tokens": 395
+  },
+  {
+   "id": "adv-002",
+   "category": "adversarial",
+   "outcome": "plan",
+   "ok": false,
+   "intent_ok": true,
+   "problems": [
+    "filters differ"
+   ],
+   "llm_calls": 2,
+   "input_tokens": 1976,
+   "output_tokens": 394
+  },
+  {
+   "id": "adv-003",
+   "category": "adversarial",
+   "outcome": "clarify",
+   "ok": true,
+   "intent_ok": null,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 967,
+   "output_tokens": 134
+  },
+  {
+   "id": "adv-004",
+   "category": "adversarial",
+   "outcome": "out_of_scope",
+   "ok": true,
+   "intent_ok": null,
+   "problems": [],
+   "llm_calls": 1,
+   "input_tokens": 1235,
+   "output_tokens": 48
+  },
+  {
+   "id": "adv-005",
+   "category": "adversarial",
+   "outcome": "plan",
+   "ok": true,
+   "intent_ok": true,
+   "problems": [],
+   "llm_calls": 2,
+   "input_tokens": 2520,
+   "output_tokens": 238
+  }
+ ],
+ "meta": {
+  "prompt": "planner-v2",
+  "scope": "all 42 active cases",
+  "model": "gpt-6-luna"
+ }
+}

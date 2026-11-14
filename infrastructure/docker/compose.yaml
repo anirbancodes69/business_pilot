@@ -113,6 +113,12 @@ services:
       OTEL_SERVICE_NAME: bp-ai-engine
       OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-none}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+      API_BASE_URL: http://api:3001
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-dummy}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL_PLANNER: ${LLM_MODEL_PLANNER:-}
+      LLM_MODEL_EXPLAINER: ${LLM_MODEL_EXPLAINER:-}
     ports: ['127.0.0.1:8000:8000']
     healthcheck:
       test:
@@ -202,8 +208,16 @@ services:
 
   web:
     build: { context: ../.., dockerfile: infrastructure/docker/web.Dockerfile }
+    environment:
+      WEB_BASE_URL: http://localhost:3000
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_INTERNAL_URL: http://keycloak:8080/realms/businesspilot
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-businesspilot}
+      API_BASE_URL: http://api:3001
+      WEB_SESSION_SECRET: ${WEB_SESSION_SECRET:-}
     depends_on:
       api: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
     ports: ['127.0.0.1:3000:3000']
     healthcheck:
       test:

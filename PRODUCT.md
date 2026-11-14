@@ -67,7 +67,7 @@ These five capabilities define the product. Design: [docs/ai/analyst-orchestrato
 | 2 | **Analytical planning** | The system chooses the right analysis: lookup, ranking, comparison, trend or diagnosis | Plans reference semantic IDs and are validated. No SQL from the model |
 | 3 | **Multi-step investigation** | For "why" questions, the system breaks a change down, finds the largest contributors and drills into them | Bounded step catalog, budget and stop rules. Every step is re-authorized (ADR-0010, OPEN) |
 | 4 | **Evidence-grounded diagnosis and explanation** | Contributing factors ranked by measured contribution, with facts, calculations, hypotheses and unknowns kept apart | Every number has provenance (ADR-0012, OPEN). External causes are always labelled as hypotheses |
-| 5 | **Evidence-based recommendations** | Concrete next things to check or do, for example which customers to follow up for overdue payments | Each recommendation cites findings. Nothing is executed in customer systems (D-OPEN-23) |
+| 5 | **Evidence-based recommendations** | Concrete next things to check or do, for example which customers to follow up for overdue payments | Each recommendation cites findings. Nothing is executed in customer systems (D-23) |
 
 ## What a good answer looks like
 
@@ -98,7 +98,7 @@ In scope:
   - analytical planning for lookup, ranking, comparison, trend and diagnosis;
   - bounded investigation (decomposition plus at most one drill level, subject to ADR-0010);
   - diagnosis with evidence for every number;
-  - recommendations from a small wholesale-distribution playbook, each citing evidence (D-OPEN-23).
+  - recommendations from a small wholesale-distribution playbook, each citing evidence (D-23).
 - Contextual follow-up questions within a conversation (structured state, subject to ADR-0011).
 - RBAC with branch-level ABAC (sales manager limited to assigned branches).
 - Answer structure with sources and freshness, plus an audit log of questions and executed queries.

@@ -1,0 +1,372 @@
+{
+ "semantic_model_version": 1,
+ "tenant_settings": {
+  "currency": "INR",
+  "timezone": "Asia/Kolkata",
+  "fiscal_year_start_month": 4,
+  "number_format": "indian"
+ },
+ "business_rules": [
+  {
+   "id": "overdue_days",
+   "label": "Receivable is overdue after",
+   "value": 0,
+   "unit": "days"
+  },
+  {
+   "id": "slow_moving_days",
+   "label": "Stock is slow moving after",
+   "value": 120,
+   "unit": "days"
+  }
+ ],
+ "entities": [
+  {
+   "id": "customer",
+   "label": "Customer",
+   "synonyms": [
+    "party",
+    "client",
+    "retailer"
+   ]
+  },
+  {
+   "id": "product",
+   "label": "Product",
+   "synonyms": [
+    "item",
+    "sku"
+   ]
+  },
+  {
+   "id": "branch",
+   "label": "Branch",
+   "synonyms": [
+    "location",
+    "depot"
+   ]
+  },
+  {
+   "id": "invoice",
+   "label": "Invoice",
+   "synonyms": [
+    "bill",
+    "sale"
+   ]
+  },
+  {
+   "id": "invoice_line",
+   "label": "Invoice line",
+   "synonyms": [
+    "line item"
+   ]
+  },
+  {
+   "id": "payment",
+   "label": "Payment",
+   "synonyms": [
+    "receipt",
+    "collection"
+   ]
+  },
+  {
+   "id": "payment_allocation",
+   "label": "Payment allocation",
+   "synonyms": []
+  }
+ ],
+ "measures": [
+  {
+   "id": "revenue",
+   "entity": "invoice",
+   "label": "Revenue",
+   "unit": "currency",
+   "synonyms": [
+    "sales",
+    "turnover"
+   ],
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better",
+   "business_definition": "Invoice net amount as synced from the source. Whether it includes tax depends on the source mapping.",
+   "valid_dimensions": [
+    "invoice.invoice_date",
+    "branch.name",
+    "branch.state",
+    "customer.name",
+    "customer.segment",
+    "customer.city",
+    "invoice.status"
+   ],
+   "breakdown_measure": "line_revenue"
+  },
+  {
+   "id": "invoice_count",
+   "entity": "invoice",
+   "label": "Invoice count",
+   "unit": "count",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "average_order_value",
+   "entity": "invoice",
+   "label": "Average order value",
+   "unit": "currency",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "ratio",
+   "additivity": "non_additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "line_revenue",
+   "entity": "invoice_line",
+   "label": "Line revenue",
+   "unit": "currency",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better",
+   "valid_dimensions": [
+    "invoice.invoice_date",
+    "product.category",
+    "product.sub_category",
+    "product.name",
+    "product.brand",
+    "branch.name",
+    "customer.name"
+   ],
+   "drivers": [
+    {
+     "components": [
+      "units_sold",
+      "average_selling_price"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "units_sold",
+   "entity": "invoice_line",
+   "label": "Units sold",
+   "unit": "quantity",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "average_selling_price",
+   "entity": "invoice_line",
+   "label": "Average selling price",
+   "unit": "currency",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "ratio",
+   "additivity": "non_additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "gross_margin",
+   "entity": "invoice_line",
+   "label": "Gross margin",
+   "unit": "currency",
+   "synonyms": [
+    "profit"
+   ],
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better",
+   "business_definition": "Line revenue minus line cost. Only lines with a cost are included; the answer states coverage."
+  },
+  {
+   "id": "gross_margin_pct",
+   "entity": "invoice_line",
+   "label": "Gross margin %",
+   "unit": "percent",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "ratio",
+   "additivity": "non_additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "payments_received",
+   "entity": "payment",
+   "label": "Payments received",
+   "unit": "currency",
+   "synonyms": [
+    "collections"
+   ],
+   "default_time_dimension": "payment.payment_date",
+   "metric_type": "simple",
+   "additivity": "additive",
+   "polarity": "higher_is_better"
+  },
+  {
+   "id": "outstanding_receivables",
+   "entity": "invoice",
+   "label": "Outstanding receivables",
+   "unit": "currency",
+   "synonyms": [
+    "dues",
+    "receivables",
+    "outstanding"
+   ],
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "simple",
+   "additivity": "semi_additive",
+   "polarity": "lower_is_better",
+   "business_definition": "Invoice net amount minus allocated payments. Without allocation data, falls back to customer balance and says so."
+  },
+  {
+   "id": "overdue_receivables",
+   "entity": "invoice",
+   "label": "Overdue receivables",
+   "unit": "currency",
+   "default_time_dimension": "invoice.due_date",
+   "metric_type": "simple",
+   "additivity": "semi_additive",
+   "polarity": "lower_is_better",
+   "business_definition": "Outstanding receivables on invoices past their due date by more than the overdue_days rule."
+  },
+  {
+   "id": "days_sales_outstanding",
+   "entity": "invoice",
+   "label": "Days sales outstanding",
+   "unit": "days",
+   "default_time_dimension": "invoice.invoice_date",
+   "metric_type": "derived",
+   "additivity": "non_additive",
+   "polarity": "lower_is_better",
+   "drivers": [
+    {
+     "components": [
+      "outstanding_receivables",
+      "revenue"
+     ]
+    }
+   ]
+  }
+ ],
+ "dimensions": [
+  {
+   "id": "invoice.invoice_date",
+   "label": "Invoice date",
+   "type": "time"
+  },
+  {
+   "id": "invoice.due_date",
+   "label": "Due date",
+   "type": "time"
+  },
+  {
+   "id": "invoice.status",
+   "label": "Invoice status",
+   "type": "categorical"
+  },
+  {
+   "id": "payment.payment_date",
+   "label": "Payment date",
+   "type": "time"
+  },
+  {
+   "id": "branch.state",
+   "label": "State",
+   "type": "categorical",
+   "hierarchy": {
+    "name": "geography",
+    "level": 1
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "branch.name",
+   "label": "Branch",
+   "type": "categorical",
+   "synonyms": [
+    "location"
+   ],
+   "hierarchy": {
+    "name": "geography",
+    "level": 2
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "customer.name",
+   "label": "Customer",
+   "type": "categorical",
+   "synonyms": [
+    "party"
+   ],
+   "diagnostic": true
+  },
+  {
+   "id": "customer.segment",
+   "label": "Customer segment",
+   "type": "categorical",
+   "diagnostic": true
+  },
+  {
+   "id": "customer.city",
+   "label": "Customer city",
+   "type": "categorical"
+  },
+  {
+   "id": "product.category",
+   "label": "Product category",
+   "type": "categorical",
+   "hierarchy": {
+    "name": "product",
+    "level": 1
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "product.sub_category",
+   "label": "Product sub-category",
+   "type": "categorical",
+   "hierarchy": {
+    "name": "product",
+    "level": 2
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "product.name",
+   "label": "Product",
+   "type": "categorical",
+   "hierarchy": {
+    "name": "product",
+    "level": 3
+   },
+   "diagnostic": true
+  },
+  {
+   "id": "product.brand",
+   "label": "Brand",
+   "type": "categorical",
+   "diagnostic": true
+  }
+ ],
+ "glossary": [
+  {
+   "term": "dues",
+   "definition": "Money customers still owe",
+   "maps_to": "measure:outstanding_receivables"
+  },
+  {
+   "term": "sales",
+   "definition": "Net invoiced amount",
+   "maps_to": "measure:revenue"
+  },
+  {
+   "term": "profit",
+   "definition": "Gross margin on invoice lines",
+   "maps_to": "measure:gross_margin"
+  }
+ ]
+}

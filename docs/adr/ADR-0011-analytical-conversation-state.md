@@ -1,6 +1,6 @@
 # ADR-0011: Structured analytical conversation state
 
-- **Status:** OPEN (awaiting product-owner decision)
+- **Status:** Accepted 2026-11-14 as D-21 (option A: structured context only)
 - **Date:** 2026-11-13
 - **Decision items:** D-OPEN-20
 

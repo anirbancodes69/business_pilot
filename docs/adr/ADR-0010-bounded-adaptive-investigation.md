@@ -1,6 +1,6 @@
 # ADR-0010: Bounded adaptive investigation (AI Analyst Orchestrator)
 
-- **Status:** OPEN (awaiting product-owner decision). Refines, and does not replace, D-07 ([ADR-0006](ADR-0006-ai-orchestration.md)).
+- **Status:** Accepted 2026-11-14 as D-20 (option A: deterministic rules choose the next step). Refines, and does not replace, D-07 ([ADR-0006](ADR-0006-ai-orchestration.md)).
 - **Date:** 2026-11-13
 - **Decision items:** D-OPEN-19
 

@@ -1,4 +1,5 @@
 import type { AuthorizationContext } from '../authorization/authorization';
+import { measureColumns } from '../query/expressions';
 import type { SemanticModelDocument } from './semantic-model.validator';
 
 // Authorized semantic view (contracts/semantic-model/README.md): the only description of the
@@ -18,6 +19,8 @@ export interface AuthorizedView {
   entities: { id: string; label: string; description?: string; synonyms?: string[] }[];
   measures: {
     id: string;
+    /** The entity the measure is computed on. A plan may use measures of one entity only. */
+    entity: string;
     label: string;
     description?: string;
     unit: string;
@@ -29,6 +32,8 @@ export interface AuthorizedView {
     business_definition?: string;
     certified?: boolean;
     valid_dimensions?: string[];
+    /** Measure to use for breakdowns this one does not support (an approximation). */
+    breakdown_measure?: string;
     drivers?: { components: string[] }[];
   }[];
   dimensions: {
@@ -42,9 +47,14 @@ export interface AuthorizedView {
   glossary: { term: string; definition: string; maps_to?: string }[];
 }
 
+/** Fields the tenant tagged as personal or sensitive are not offered to the AI model by default. */
+const flagged = (tags: readonly string[] | undefined): boolean =>
+  (tags ?? []).some((t) => t === 'pii' || t === 'sensitive');
+
 export function buildAuthorizedView(
   model: SemanticModelDocument,
   ctx: AuthorizationContext,
+  options: { forAi?: boolean } = {},
 ): AuthorizedView {
   const entities = new Set(ctx.granted.entities);
   const masked = new Set(ctx.column_masks.map((m) => `${m.entity}.${m.attribute}`));
@@ -52,6 +62,7 @@ export function buildAuthorizedView(
   // Dimensions: granted, on a granted entity, and the underlying column is not masked.
   const dims = model.dimensions.filter(
     (d) =>
+      !(options.forAi && flagged(d.tags)) &&
       ctx.granted.dimensions.includes(d.id) &&
       entities.has(d.entity) &&
       !masked.has(`${d.entity}.${d.attribute}`),
@@ -62,9 +73,10 @@ export function buildAuthorizedView(
   // Iterate to a fixed point so a ratio whose part was removed is removed too.
   let measures = model.measures.filter(
     (m) =>
+      !(options.forAi && flagged(m.tags)) &&
       ctx.granted.measures.includes(m.id) &&
       entities.has(m.entity) &&
-      !(m.attribute && masked.has(`${m.entity}.${m.attribute}`)),
+      !measureColumns(model, m.id).some((c) => masked.has(`${c.entity}.${c.column}`)),
   );
   for (;;) {
     const ids = new Set(measures.map((m) => m.id));
@@ -111,6 +123,7 @@ export function buildAuthorizedView(
         .map((d) => ({ components: d.components }));
       return compact({
         id: m.id,
+        entity: m.entity,
         label: m.label,
         description: m.description,
         unit: m.unit,
@@ -125,6 +138,10 @@ export function buildAuthorizedView(
         business_definition: m.business_definition,
         certified: m.certified,
         valid_dimensions: validDims,
+        breakdown_measure:
+          m.breakdown_measure && measureIds.has(m.breakdown_measure)
+            ? m.breakdown_measure
+            : undefined,
         drivers: drivers?.length ? drivers : undefined,
       });
     }),

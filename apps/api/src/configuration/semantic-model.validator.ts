@@ -49,6 +49,7 @@ const measure = z.strictObject({
   additivity: z.enum(['additive', 'semi_additive', 'non_additive']),
   polarity: z.enum(['higher_is_better', 'lower_is_better', 'neutral']),
   valid_dimensions: z.array(dimensionId).optional(),
+  breakdown_measure: id.optional(),
   formula_ref: z.string().min(1).optional(),
   drivers: z
     .array(z.strictObject({ formula_ref: z.string().min(1), components: z.array(id).min(2) }))
@@ -167,6 +168,15 @@ export function validateSemanticModel(input: unknown): {
       problems.push(`measure ${x.id}: a ratio must be non_additive`);
     if (x.metric_type === 'derived' && !x.formula_ref)
       problems.push(`measure ${x.id}: derived needs formula_ref`);
+    if (x.breakdown_measure) {
+      const other = m.measures.find((y) => y.id === x.breakdown_measure);
+      if (!other)
+        problems.push(`measure ${x.id}: unknown breakdown measure ${x.breakdown_measure}`);
+      else if (other.unit !== x.unit)
+        problems.push(`measure ${x.id}: breakdown measure must have the same unit`);
+      else if (other.entity === x.entity)
+        problems.push(`measure ${x.id}: breakdown measure must be on a different entity`);
+    }
     for (const dr of x.valid_dimensions ?? [])
       if (!dims.has(dr)) problems.push(`measure ${x.id}: unknown valid dimension ${dr}`);
     for (const dv of x.drivers ?? [])

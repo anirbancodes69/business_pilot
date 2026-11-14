@@ -17,7 +17,7 @@ A projection of one published semantic model version, filtered by the user's Aut
 }
 ```
 
-The implemented builder (`apps/api/src/configuration/authorized-view.ts`) also returns `business_rules`, and per measure `metric_type`, `additivity`, `polarity`, `business_definition`, `certified`, `valid_dimensions` and `drivers` (component IDs only), and per dimension `hierarchy` and `diagnostic` (schema 0.2.0). The JSON above is the abbreviated v0 form. Member synonyms are not included.
+The implemented builder (`apps/api/src/configuration/authorized-view.ts`) also returns `business_rules`, and per measure `entity` (the entity id, so a plan can keep to one entity; never a table name), `metric_type`, `additivity`, `polarity`, `business_definition`, `certified`, `valid_dimensions` and `drivers` (component IDs only), and per dimension `hierarchy` and `diagnostic` (schema 0.2.0). The JSON above is the abbreviated v0 form. Member synonyms are not included.
 
 Rules:
 
