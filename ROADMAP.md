@@ -4,7 +4,7 @@ Ordering principle: reach a **working vertical slice** fast. The slice is one pi
 
 Where a later milestone's items are needed by the slice, a thin version is pulled forward, and each milestone says what it defers.
 
-Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestone 5 **Merged to `main` (PR #8), implemented at API level** (the sync UI moved to M9); Milestone 6 **Built on branch `feature/m6-ai-orchestration`, pending the product owner's browser review, CI and merge** (E6.0 to E6.9 all implemented in a first version; the acceptance review is in [CURRENT.md](CURRENT.md)); Milestones 7 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
+Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`: PR #1, #3, #4); Milestone 4 **Merged to `main` (PR #5), implemented at API level only** (E4.0 and the AI and UI parts of E4.4 are deferred, see the milestone); Milestone 5 **Merged to `main` (PR #8), implemented at API level** (the sync UI moved to M9); Milestone 6 **Merged to `main` (PR #9, 2026-11-15), API and first UI** (E6.0 to E6.9 all implemented in a first version; known gaps and the acceptance review are in [CURRENT.md](CURRENT.md)); Milestones 7 to 10 **Not started**. [CURRENT.md](CURRENT.md) has the details.
 
 ---
 
@@ -96,6 +96,8 @@ Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`
 
 **Depends on:** M5 (managed-sync data).
 **Acceptance:** the six example questions in [PRODUCT.md](PRODUCT.md) are answered correctly against the synthetic dataset. A sales manager cannot obtain data for unassigned branches by any phrasing in the adversarial test set. Every number in an answer passes the grounding check. "Why" questions find the planted contributors in the order of contribution, within the step budget, on the investigation cases. Follow-ups resolve correctly and never widen access.
+
+- **Status (2026-11-15):** merged (PR #9). All six PRODUCT.md example questions are answered live on the synthetic dataset and the figures were cross-checked against SQL; the golden set (57 active cases) and 199 isolation tests pass. Not met or not proven: real customer data is not approved ([review](docs/security/llm-data-processing-review.md)); the scores of the model-based evaluation are not independent (prompts were tuned on the cases); there is no CI job for the model-based evaluation; data reaches the question path through a seed command until Milestone 9's onboarding exists.
 
 ## Milestone 7 — Retrieval for semantic understanding (RAG and vector retrieval)
 
