@@ -19,6 +19,8 @@ export interface AuthorizedView {
   entities: { id: string; label: string; description?: string; synonyms?: string[] }[];
   measures: {
     id: string;
+    /** The entity the measure is computed on. A plan may use measures of one entity only. */
+    entity: string;
     label: string;
     description?: string;
     unit: string;
@@ -112,6 +114,7 @@ export function buildAuthorizedView(
         .map((d) => ({ components: d.components }));
       return compact({
         id: m.id,
+        entity: m.entity,
         label: m.label,
         description: m.description,
         unit: m.unit,
