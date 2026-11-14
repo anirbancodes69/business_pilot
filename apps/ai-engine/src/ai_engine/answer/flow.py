@@ -103,6 +103,45 @@ def _build_evidence(
     return shown, first_ref
 
 
+def _tables(
+    result: ToolResult, ledger: EvidenceLedger, view_labels: dict[str, str]
+) -> list[dict[str, Any]]:
+    """Result tables for the UI. Every number is the ledger's rendered text; nothing is formatted
+    by the UI."""
+    tables: list[dict[str, Any]] = []
+    for rs in result.result_sets:
+        rows: list[list[str | None]] = []
+        for i, row in enumerate(rs.rows[:MAX_ROWS]):
+            cells: list[str | None] = []
+            for col, value in zip(rs.columns, row, strict=False):
+                if value is None:
+                    cells.append(None)
+                elif col.kind == "dimension":
+                    cells.append(str(value))
+                else:
+                    cells.append(_cell(ledger, result, rs, col, i, value).display)
+            rows.append(cells)
+        tables.append(
+            {
+                "result_set_id": rs.id,
+                "title": "Current period" if rs.role == "current" else "Comparison period",
+                "period": rs.role,
+                "as_of": result.data_executed_at,
+                "truncated": rs.truncated or rs.row_count > MAX_ROWS,
+                "columns": [
+                    {
+                        "semantic_id": c.semantic_id,
+                        "label": view_labels.get(c.semantic_id, c.semantic_id),
+                        "kind": c.kind,
+                    }
+                    for c in rs.columns
+                ],
+                "rows": rows,
+            }
+        )
+    return tables
+
+
 def _cell(
     ledger: EvidenceLedger,
     result: ToolResult,
@@ -261,12 +300,19 @@ def answer_question(
     base: dict[str, Any] = {
         "request_id": request_id,
         "intent": intent,
-        "tables": [{"result_set_id": rs.id, "title": rs.role} for rs in result.result_sets],
+        "tables": _tables(
+            result,
+            ledger,
+            {
+                **{m.id: m.label for m in view.measures},
+                **{d.id: d.label for d in view.dimensions},
+            },
+        ),
         "sources": result.sources,
         "freshness": result.freshness,
         "execution": execution,
     }
-    notes = ["only the first rows are shown"] if result.truncated else []
+    notes: list[str] = []  # truncation is reported by code (unknowns), not by the model
 
     # Nothing matched: answer from code with no model call (saves cost; nothing to explain).
     if all(rs.row_count == 0 for rs in result.result_sets):

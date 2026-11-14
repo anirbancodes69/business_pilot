@@ -1,0 +1,41 @@
+// All user-facing text lives here so that it can be translated later (docs/ui/ui-standards.md).
+
+export const S = {
+  appName: 'BusinessPilot',
+  signIn: 'Sign in',
+  signOut: 'Sign out',
+  signInIntro: 'Ask questions about your business data and get answers you can check.',
+  askPlaceholder: 'Ask a question, for example: Which customers owe us the most?',
+  ask: 'Ask',
+  asking: 'Working on it…',
+  workspace: 'Workspace',
+  errors: {
+    config: 'Sign-in is not set up on this server yet.',
+    signin: 'Sign-in did not complete. Please try again.',
+    'no-workspace': 'Your account has no workspace yet. Ask an administrator to add you.',
+    session_expired: 'Your session has ended. Please sign in again.',
+    not_allowed: 'You do not have access to ask questions here.',
+    not_found: 'No published data model exists for this workspace yet.',
+    rate_limited: 'You have asked many questions in a short time. Please wait a few minutes.',
+    unavailable: 'Answers are not available right now. Please try again shortly.',
+    invalid: 'Please enter a question of up to 1000 characters.',
+    failed: 'Something went wrong. Please try again.',
+  } as Record<string, string>,
+  sections: {
+    facts: 'Verified facts',
+    calculations: 'Calculations',
+    explanations: 'Possible explanations',
+    recommendations: 'Recommendations',
+    unknowns: 'What we could not tell',
+  },
+  hypothesisNote: 'Hypotheses, not verified by your data.',
+  dataAsOf: 'Data as of',
+  truncated: 'Only the first rows are shown.',
+  status: {
+    answered_facts_only: 'Explanation unavailable. Showing the results only.',
+    not_authorized: 'Not available for your access.',
+    out_of_scope: 'This question is outside your business data.',
+    failed: 'This question could not be answered.',
+    clarification_needed: 'More detail needed.',
+  } as Record<string, string>,
+} as const;

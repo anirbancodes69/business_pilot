@@ -45,7 +45,7 @@ curl -s http://localhost:8080/realms/businesspilot/protocol/openid-connect/token
 curl -s http://localhost:3001/v1/me -H "Authorization: Bearer <access_token>"
 ```
 
-The password grant is enabled only because no login screen exists yet.
+The password grant is enabled for scripted tests and `curl`. In a browser, open http://localhost:3000 and use **Sign in**: it sends you to Keycloak and back (the web app needs `WEB_SESSION_SECRET` in `.env`; the setup script generates it, and an older `.env` needs the line added).
 
 4. Give the user a tenant. A new user has none, so only `/v1/me` works for them. Tenants are created by an operator command, not over HTTP:
 

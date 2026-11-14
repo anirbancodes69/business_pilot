@@ -1,0 +1,223 @@
+/* Design tokens (docs/ui/ui-standards.md). Plain CSS, no framework. */
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --text: #1c1d1f;
+  --muted: #5b5f66;
+  --line: #d9dbe0;
+  --accent: #1b4fd8;
+  --accent-text: #ffffff;
+  --info-bg: #eaf0ff;
+  --warn-bg: #fff3d6;
+  --warn-line: #b7791f;
+  --hypo-bg: #f3effb;
+  --hypo-line: #6b46c1;
+  --radius: 8px;
+  --gap: 1rem;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121316;
+    --surface: #1b1d21;
+    --text: #ececee;
+    --muted: #a3a7af;
+    --line: #353840;
+    --accent: #7ea3ff;
+    --accent-text: #0b1220;
+    --info-bg: #1c2740;
+    --warn-bg: #3a2f14;
+    --warn-line: #e0a93b;
+    --hypo-bg: #2a2340;
+    --hypo-line: #b79cff;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.bar {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  padding: 0.6rem var(--gap);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  font-weight: 700;
+  margin-right: auto;
+}
+.who {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.page {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: var(--gap);
+}
+.page.narrow {
+  max-width: 32rem;
+  padding-top: 4rem;
+}
+.button {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.link {
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+.thread {
+  display: grid;
+  gap: calc(var(--gap) * 1.5);
+  margin-bottom: 7rem;
+}
+.turn {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--gap);
+}
+.question {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.summary {
+  font-size: 1.1rem;
+  margin: 0.25rem 0 var(--gap);
+}
+.banner {
+  border-left: 4px solid var(--accent);
+  background: var(--info-bg);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  margin: 0 0 var(--gap);
+}
+.banner.warning {
+  border-left-color: var(--warn-line);
+  background: var(--warn-bg);
+}
+.section {
+  margin-top: var(--gap);
+}
+.section h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 0.25rem;
+}
+.section ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+.section.explanations {
+  background: var(--hypo-bg);
+  border-left: 4px solid var(--hypo-line);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+}
+.note,
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0.25rem 0;
+}
+.tablewrap {
+  overflow-x: auto;
+  margin: var(--gap) 0;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+caption {
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding-bottom: 0.25rem;
+}
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--line);
+}
+th.num,
+td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem var(--gap);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  max-width: none;
+}
+.ask textarea {
+  flex: 1;
+  font: inherit;
+  padding: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+  max-height: 8rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -61,6 +61,8 @@ To change a status, update the ADR and this table in the same commit. Only the p
 | P-18 | Authentication through an external OIDC provider. The api verifies tokens and reads identity only. Tenant selection is a request checked against membership. No provider configured means every authenticated route fails closed (formerly D-OPEN-03, approach only). | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 | P-19 | Service trust (MVP): a shared service token for internal endpoints, plus an HMAC-SHA256 signed, 2-minute RequestContext bound to the request ID, with key rotation overlap (formerly D-OPEN-15). | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
 | P-20 | RLS details: `set_config(..., true)` as the parameterized form of `SET LOCAL`; `app_user` and `permission` as the only non-RLS global tables; non-superuser `bp_owner`; `bp_system` without login until Milestone 5. | [0014](docs/adr/ADR-0014-m2-authentication-service-trust-and-rls-details.md) |
+| P-23 | Web sign-in: authorization-code flow with PKCE through Next.js server routes; tokens sealed server-side in one `HttpOnly` cookie, never in browser JavaScript. Proposed 2026-11-15, part of D-OPEN-03. | [0020](docs/adr/ADR-0020-web-sign-in-and-session.md) |
+| P-24 | UI standards: plain CSS tokens (no UI library), no numbers computed or formatted in the UI, model text as plain text, WCAG 2.2 AA target, distinct labelled answer sections. Proposed 2026-11-15. | [ui-standards.md](docs/ui/ui-standards.md) |
 
 ## OPEN
 

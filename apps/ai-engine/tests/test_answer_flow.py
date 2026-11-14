@@ -54,13 +54,18 @@ def test_happy_path_renders_numbers_from_the_ledger_only() -> None:
     assert r.summary == "Asha Traders owes the most, ₹9.00 lakh."
     assert r.verified_facts[0]["statement"] == "Top: ₹9.00 lakh"
     assert r.execution["grounding"] == "passed" and r.execution["tool_calls"] == 1
-    assert r.execution["prompt_versions"] == {"planner": "planner-v2", "explainer": "explainer-v1"}
+    assert r.execution["prompt_versions"] == {"planner": "planner-v2", "explainer": "explainer-v2"}
     # one planner call and one explainer call, and the api saw an absolute-dated plan
     assert [q.role for q in model.requests] == ["planner", "explainer"]
     assert tools.calls[0]["plan"]["time_range"]["start"] == "2026-04-01"
     assert (
         tools.calls[0]["request_context"] == "signed.token" and tools.calls[0]["request_id"] == RID
     )
+    # the UI table carries display strings only, with labels from the view
+    table = r.tables[0]
+    assert [c["label"] for c in table["columns"]] == ["Customer", "Outstanding receivables"]
+    assert table["rows"] == [["Asha Traders", "₹9.00 lakh"], ["Vikram Stores", "₹50,000"]]
+    assert table["as_of"] == "2026-11-15T04:30:00Z" and table["title"] == "Current period"
     # every cited evidence id exists in the ledger, and the context holds ids only
     ids = {e["id"] for e in r.evidence}
     assert all(i in ids for f in r.verified_facts for i in f["evidence_ids"])

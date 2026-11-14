@@ -151,11 +151,15 @@
     },
     "tables": {
       "type": "array",
-      "description": "Result tables for UI rendering (from verified result sets).",
+      "description": "Result tables for the UI, from verified result sets. Cells are display strings already rendered by code (numbers from the evidence ledger); the UI shows them as text.",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
-          "result_set_id"
+          "result_set_id",
+          "title",
+          "columns",
+          "rows"
         ],
         "properties": {
           "result_set_id": {
@@ -163,6 +167,59 @@
           },
           "title": {
             "type": "string"
+          },
+          "period": {
+            "enum": [
+              "current",
+              "comparison"
+            ]
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the api ran the query."
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "semantic_id",
+                "label",
+                "kind"
+              ],
+              "properties": {
+                "semantic_id": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "dimension",
+                    "measure"
+                  ]
+                }
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
           }
         }
       }

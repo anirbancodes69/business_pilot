@@ -208,8 +208,16 @@ services:
 
   web:
     build: { context: ../.., dockerfile: infrastructure/docker/web.Dockerfile }
+    environment:
+      WEB_BASE_URL: http://localhost:3000
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_INTERNAL_URL: http://keycloak:8080/realms/businesspilot
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-businesspilot}
+      API_BASE_URL: http://api:3001
+      WEB_SESSION_SECRET: ${WEB_SESSION_SECRET:-}
     depends_on:
       api: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
     ports: ['127.0.0.1:3000:3000']
     healthcheck:
       test:
