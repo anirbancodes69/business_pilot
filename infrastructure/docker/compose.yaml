@@ -161,6 +161,17 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
 
+  # Operator command: create a tenant and make one user its owner (no HTTP route exists for this).
+  #   pnpm tenant:provision --name "Acme Traders" --slug acme --owner-email owner@example.com
+  provision-tenant:
+    profiles: ['tools']
+    build: { context: ../.., dockerfile: infrastructure/docker/api.Dockerfile }
+    entrypoint: ['node', 'dist/tenancy/provision-tenant.js']
+    environment:
+      <<: *node-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
   worker:
     build: { context: ../.., dockerfile: infrastructure/docker/api.Dockerfile }
     command: ['node', 'dist/worker.js']

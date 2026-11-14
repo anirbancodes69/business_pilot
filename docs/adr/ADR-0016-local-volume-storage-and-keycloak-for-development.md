@@ -48,7 +48,7 @@ Neither needs a production vendor yet. Everything runs on one machine with Docke
 
 - New named volumes: `objectdata` and `keycloakdata`. `docker compose down -v` deletes uploads and Keycloak users.
 - New variables: `OBJECT_STORAGE_LOCAL_DIR`, `OIDC_JWKS_URL`, `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_PORT` (optional). An existing `.env` needs `KEYCLOAK_ADMIN_PASSWORD` added before the stack starts.
-- Users are created in the Keycloak admin console. A signed-in user has no tenant until one is provisioned: there is no provisioning route or tool yet.
+- Users are created in the Keycloak admin console. A signed-in user has no tenant until an operator provisions one (`pnpm tenant:provision`, added after this decision). There is no HTTP route for it.
 
 ## Revisit when
 

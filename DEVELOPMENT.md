@@ -43,7 +43,15 @@ curl -s http://localhost:8080/realms/businesspilot/protocol/openid-connect/token
 curl -s http://localhost:3001/v1/me -H "Authorization: Bearer <access_token>"
 ```
 
-The password grant is enabled only because no login screen exists yet. A new user has no tenant: there is no provisioning route or tool yet, so only `/v1/me` works for them.
+The password grant is enabled only because no login screen exists yet.
+
+4. Give the user a tenant. A new user has none, so only `/v1/me` works for them. Tenants are created by an operator command, not over HTTP:
+
+```bash
+pnpm tenant:provision --name "Acme Traders" --slug acme --owner-email <email>
+```
+
+The user must have made one authenticated call first (step 3), so that the api knows them. To provision before that, use `--owner-subject <Keycloak user ID>` in place of `--owner-email`. The command prints the tenant ID, which goes in the `X-Tenant-Id` header of later calls. The owner gets every permission. The command needs the stack running and migrated, and whoever can run it holds the application database credentials and the key-encryption key.
 
 Uploaded files are stored on the `objectdata` volume, shared by the api and the worker. `docker compose down -v` deletes them, and the Keycloak users with them.
 

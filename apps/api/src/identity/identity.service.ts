@@ -27,6 +27,39 @@ export class IdentityService {
     });
   }
 
+  /**
+   * Operator lookups for tenant provisioning. Not reachable over HTTP. Emails are compared without
+   * case. An email is not unique, so the caller must handle zero or several matches.
+   */
+  findUsersByEmail(email: string): Promise<{ id: string; status: string }[]> {
+    return this.db.identityTx((tx) =>
+      tx
+        .selectFrom('core.app_user')
+        .select(['id', 'status'])
+        .where((eb) => eb(eb.fn<string>('lower', ['email']), '=', email.toLowerCase()))
+        .execute(),
+    );
+  }
+
+  /**
+   * Finds the user for an OIDC subject, or creates an empty one. Unlike `resolveUser` it never
+   * overwrites the email or name of an existing user. Sign-in fills them in later.
+   */
+  ensureUserBySubject(subject: string): Promise<{ id: string; status: string }> {
+    return this.db.identityTx(async (tx) => {
+      await tx
+        .insertInto('core.app_user')
+        .values({ idp_subject: subject, email: null, display_name: null })
+        .onConflict((oc) => oc.column('idp_subject').doNothing())
+        .execute();
+      return tx
+        .selectFrom('core.app_user')
+        .select(['id', 'status'])
+        .where('idp_subject', '=', subject)
+        .executeTakeFirstOrThrow();
+    });
+  }
+
   /** Memberships of one user, via the single login exception (P-15, own memberships only). */
   listMemberships(userId: string) {
     return this.db.userTx(userId, (tx) =>

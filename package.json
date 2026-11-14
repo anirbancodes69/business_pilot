@@ -18,6 +18,7 @@
     "stack:up": "docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --build --wait",
     "stack:up:observability": "OTEL_TRACES_EXPORTER=otlp docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile observability up -d --build --wait",
     "stack:down": "docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile observability down",
+    "tenant:provision": "docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile tools run --rm provision-tenant",
     "test:isolation": "pnpm --filter @businesspilot/api test:isolation"
   },
   "devDependencies": {

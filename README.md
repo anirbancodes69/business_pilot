@@ -41,7 +41,7 @@ pnpm check                       # lint, type-check and unit tests
 pnpm test:isolation              # tenant isolation suite; needs the postgres service running
 ```
 
-Sign-in uses the Keycloak in the stack. Create users in its admin console at http://localhost:8080 (user `admin`, password `KEYCLOAK_ADMIN_PASSWORD` from `.env`). A new user has no tenant yet: there is no tenant provisioning route or tool, so today a signed-in user can only call `/v1/me`. See [DEVELOPMENT.md](DEVELOPMENT.md#signing-in-locally).
+Sign-in uses the Keycloak in the stack. Create users in its admin console at http://localhost:8080 (user `admin`, password `KEYCLOAK_ADMIN_PASSWORD` from `.env`). A new user has no tenant until an operator creates one with `pnpm tenant:provision`. See [DEVELOPMENT.md](DEVELOPMENT.md#signing-in-locally).
 
 ## Who it is for
 
