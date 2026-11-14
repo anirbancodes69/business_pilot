@@ -1,6 +1,6 @@
 # AI Analyst Orchestrator — design
 
-**Status: design, not implemented.** Parts of this document depend on decisions that are still OPEN. They are marked **[ADR-0010]**, **[ADR-0011]**, **[ADR-0012]** and **[D-OPEN-23]**. Until those are decided, the accepted baseline is the one in [ADR-0006](../adr/ADR-0006-ai-orchestration.md): a fixed pipeline, with diagnostic breakdowns declared up front.
+**Status: design, mostly not implemented.** The decisions marked **[ADR-0010]**, **[ADR-0011]**, **[ADR-0012]** and **[D-OPEN-23]** were accepted on 2026-11-14 as D-20 to D-23 (the recommended options). Implemented so far: the `answer-response` 0.2.0 contract, the evidence ledger, derived-calculation registry, number rendering and the literal-digit check in `apps/ai-engine/src/ai_engine/analysis/`. The orchestrator itself is not built.
 
 Summary: [AI_ENGINEERING.md](../../AI_ENGINEERING.md). Product view: [PRODUCT.md](../../PRODUCT.md#core-ai-capabilities). Pipeline and compiler details: [orchestration-pipeline.md](orchestration-pipeline.md). Semantic model: [semantic-business-model.md](semantic-business-model.md).
 

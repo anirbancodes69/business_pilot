@@ -83,7 +83,7 @@ Status of every milestone: Milestones 1, 2 and 3 **Completed** (merged to `main`
 
 **Epics**
 
-- E6.0 ~~Decide D-OPEN-19, -20, -21 and -23~~ Decided 2026-11-14 as D-20 to D-23 ([ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md) to [ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md), [ADR-0018](docs/adr/ADR-0018-evidence-based-recommendations.md)). Still to do: the contract changes (`answer-response` 0.2.0). The scope of E6.2, E6.4 and E6.9 follows those decisions.
+- E6.0 ~~Decide D-OPEN-19, -20, -21 and -23~~ Decided 2026-11-14 as D-20 to D-23 ([ADR-0010](docs/adr/ADR-0010-bounded-adaptive-investigation.md) to [ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md), [ADR-0018](docs/adr/ADR-0018-evidence-based-recommendations.md)). The `answer-response` 0.2.0 contract is done. The scope of E6.2, E6.4 and E6.9 follows those decisions.
 - E6.1 Confirm D-OPEN-01 (LLM provider) using a small evaluation spike.
 - E6.2 ai-engine pipeline stages 1–11 ([AI_ENGINEERING.md](AI_ENGINEERING.md#2-pipeline)), including the deterministic time resolver (P-17). Context retrieval is lexical only (no vectors until M7), and there is no semantic cache yet.
 - E6.3 API internal tools: `execute-plan` (plan validation, ABAC injection, SQL compiler, read-only execution, audit) with signed RequestContext.

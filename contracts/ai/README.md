@@ -10,7 +10,7 @@ Decision: [ADR-0006](../../docs/adr/ADR-0006-ai-orchestration.md). Design: [docs
 {
   "request_context": "<signed opaque token>",
   "question": "Which customers have the highest outstanding payments?",
-  "conversation_summary": "optional, short",
+  "analytical_context": { "...": "optional, typed, see answer-response (D-21); re-validated by the api every turn" },
   "authorized_view": { "...": "see contracts/semantic-model" },
   "resolved_now": "2026-11-10T10:00:00+05:30",
   "locale": "en-IN"
@@ -23,7 +23,7 @@ Response: [answer-response.schema.json](answer-response.schema.json).
 
 `POST /internal/v1/embeddings` (Milestone 7, called by the worker's indexing job) takes `{tenant_id, items[{ref, text}]}` and returns `{embedding_model, vectors[{ref, vector}]}`. ai-engine does not store or log the text (P-16).
 
-Conversation state: the api stores turns. Each `AnswerResponse` returns an updated `conversation_summary`, and the api sends it back on the next turn. The summary contains question intent and plan descriptions, not result rows.
+Conversation state (v0.2.0, D-21): the api stores the typed `analytical_context` returned with each `AnswerResponse`, re-validates it against the user's current authorized view on every turn, and sends it back. It holds semantic IDs, filters and evidence references, never rows, figures or question text. Numbers (v0.2.0, D-22): every number in an answer has one record in `evidence`; the model writes `{{ev_xxxx}}` placeholders and code renders the values.
 
 ## ai-engine → api (tool endpoints)
 

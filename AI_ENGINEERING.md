@@ -57,7 +57,7 @@ Every answer has typed sections: `verified_facts`, `derived_calculations` (each 
 
 **Provenance rule (strict).** Every number shown has exactly one origin: an api result cell (`result`), a code-registry calculation with its input evidence (`derived`), or a tenant configuration value (`config`). Hypotheses state whether the data supports or contradicts them, or whether they cannot be tested with the connected data. Every recommendation cites at least one finding. An answer that violates any of this is regenerated once and then reduced to verified facts. The evidence ledger design is OPEN ([ADR-0012](docs/adr/ADR-0012-numerical-provenance-and-evidence.md)).
 
-**Conversation state.** The current contract carries a free-text `conversation_summary`. The target is a typed `AnalyticalContext` (focus metrics, dimensions, filters, relative time range, open hypotheses, evidence references; no figures or rows). The api re-validates it against the user's authorized view on every turn, and follow-ups are applied as typed deltas ([ADR-0011](docs/adr/ADR-0011-analytical-conversation-state.md), OPEN).
+**Conversation state.** `AnswerResponse` 0.2.0 carries a typed `analytical_context` (focus metrics, dimensions, filters, relative time range, open hypotheses, evidence references; no figures or rows), decided in D-21. The api re-validates it against the user's authorized view on every turn and never treats it as authority. The ai-engine does not read it yet (the orchestrator is not built).
 
 ## 5. Caching
 
