@@ -113,6 +113,10 @@ services:
       OTEL_SERVICE_NAME: bp-ai-engine
       OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-none}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
+      LLM_PROVIDER: ${LLM_PROVIDER:-dummy}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL_PLANNER: ${LLM_MODEL_PLANNER:-}
+      LLM_MODEL_EXPLAINER: ${LLM_MODEL_EXPLAINER:-}
     ports: ['127.0.0.1:8000:8000']
     healthcheck:
       test:

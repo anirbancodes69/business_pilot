@@ -22,5 +22,6 @@ Each ADR records one significant decision. The status register is [DECISIONS.md]
 | [0016](ADR-0016-local-volume-storage-and-keycloak-for-development.md) | Local volume object storage and Keycloak for local development | Accepted (hosted choices OPEN) |
 | [0017](ADR-0017-outbox-relay-and-the-bp-system-role.md) | Outbox relay and the `bp_system` role | Accepted |
 | [0018](ADR-0018-evidence-based-recommendations.md) | How recommendations are generated | Accepted |
+| [0019](ADR-0019-openai-llm-provider.md) | OpenAI as the provisional LLM provider | Accepted (provisional) |
 
 When one ADR holds decisions with different statuses, its **Decision items** table gives the status of each item, using the IDs in DECISIONS.md.
