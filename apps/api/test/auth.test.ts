@@ -1,3 +1,5 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { generateKeyPair, SignJWT, createLocalJWKSet, exportJWK } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { OidcTokenVerifier, UnauthenticatedError } from '../src/identity/token-verifier';
@@ -20,7 +22,11 @@ async function setup() {
       .setAudience(o.aud ?? AUD)
       .setExpirationTime(o.exp ?? '5m')
       .sign(privateKey);
-  return { sign, verifier: new OidcTokenVerifier(ISSUER, AUD, createLocalJWKSet({ keys: [jwk] })) };
+  return {
+    sign,
+    jwk,
+    verifier: new OidcTokenVerifier(ISSUER, AUD, createLocalJWKSet({ keys: [jwk] })),
+  };
 }
 
 describe('OIDC token verification', () => {
@@ -53,6 +59,34 @@ describe('OIDC token verification', () => {
     const { sign, verifier } = await setup();
     await expect(verifier.verify(await sign({}))).rejects.toBeInstanceOf(UnauthenticatedError);
     await expect(verifier.verify('not.a.jwt')).rejects.toBeInstanceOf(UnauthenticatedError);
+  });
+
+  it('reads keys from OIDC_JWKS_URL without discovery and still checks the issuer', async () => {
+    const { sign, jwk } = await setup();
+    const paths: string[] = [];
+    const server = createServer((req, res) => {
+      paths.push(req.url ?? '');
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ keys: [jwk] }));
+    });
+    await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+    try {
+      const port = (server.address() as AddressInfo).port;
+      // The issuer is not reachable from here; only the key URL is.
+      const verifier = new OidcTokenVerifier(
+        ISSUER,
+        AUD,
+        undefined,
+        `http://127.0.0.1:${port}/certs`,
+      );
+      expect((await verifier.verify(await sign({ sub: 'user-1' }))).subject).toBe('user-1');
+      await expect(
+        verifier.verify(await sign({ sub: 'user-1' }, { iss: 'https://evil.test' })),
+      ).rejects.toBeInstanceOf(UnauthenticatedError);
+      expect(new Set(paths)).toEqual(new Set(['/certs']));
+    } finally {
+      await new Promise((done) => server.close(done));
+    }
   });
 
   it('fails closed when authentication is not configured', async () => {

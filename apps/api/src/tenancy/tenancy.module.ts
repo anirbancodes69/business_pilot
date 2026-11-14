@@ -23,7 +23,13 @@ import { TenancyService } from './tenancy.service';
     {
       provide: TokenVerifier,
       inject: [Env_TOKEN],
-      useFactory: (env: Env) => new OidcTokenVerifier(env.OIDC_ISSUER_URL, env.OIDC_CLIENT_ID),
+      useFactory: (env: Env) =>
+        new OidcTokenVerifier(
+          env.OIDC_ISSUER_URL,
+          env.OIDC_CLIENT_ID,
+          undefined,
+          env.OIDC_JWKS_URL,
+        ),
     },
   ],
   exports: [

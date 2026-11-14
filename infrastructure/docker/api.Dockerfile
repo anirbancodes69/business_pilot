@@ -16,6 +16,8 @@ FROM node:24-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
+# Object storage directory (ADR-0016). Created here so a named volume mounted on it is owned by node.
+RUN mkdir -p /var/lib/businesspilot/objects && chown node:node /var/lib/businesspilot/objects
 USER node
 EXPOSE 3001 3002
 CMD ["node", "dist/main.js"]

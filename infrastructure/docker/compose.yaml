@@ -1,6 +1,6 @@
 # Local development stack. Secrets come from .env (never committed):
 #   docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --build --wait
-# Host ports are bound to 127.0.0.1 only. Redis and MinIO are never exposed publicly.
+# Host ports are bound to 127.0.0.1 only. Redis, MinIO and Keycloak are never exposed publicly.
 name: businesspilot
 
 x-node-env: &node-env
@@ -13,9 +13,13 @@ x-node-env: &node-env
   AI_ENGINE_BASE_URL: http://ai-engine:8000
   OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
   OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+  OIDC_JWKS_URL: ${OIDC_JWKS_URL:-}
   INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-}
   REQUEST_CONTEXT_SIGNING_KEY: ${REQUEST_CONTEXT_SIGNING_KEY:-}
   LOCAL_KEK_BASE64: ${LOCAL_KEK_BASE64:-}
+  # Uploaded files live on a named volume shared by the api and the worker (ADR-0016).
+  OBJECT_STORAGE_DRIVER: local
+  OBJECT_STORAGE_LOCAL_DIR: /var/lib/businesspilot/objects
   OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-none}
   OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-lgtm:4318
 
@@ -73,6 +77,33 @@ services:
       timeout: 3s
       retries: 20
 
+  # Keycloak: the identity provider for local development (ADR-0016). Development mode: plain HTTP
+  # and an embedded database on a volume. Never run it this way in a shared environment.
+  # The realm file creates the `businesspilot` realm and client only. It contains no users or secrets.
+  # Admin console: http://localhost:8080 (user `admin`, password KEYCLOAK_ADMIN_PASSWORD from .env).
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2
+    command: ['start-dev', '--import-realm']
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in .env}
+      KC_HEALTH_ENABLED: 'true'
+      # Tokens always name this browser-facing URL as their issuer, whichever host a request came in on.
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8080}
+    volumes:
+      - keycloakdata:/opt/keycloak/data
+      - ../keycloak/businesspilot-realm.json:/opt/keycloak/data/import/businesspilot-realm.json:ro
+    ports: ['127.0.0.1:${KEYCLOAK_PORT:-8080}:8080']
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3",
+        ]
+      interval: 5s
+      timeout: 4s
+      retries: 40
+
   ai-engine:
     build: { context: ../.., dockerfile: infrastructure/docker/ai-engine.Dockerfile }
     environment:
@@ -98,6 +129,7 @@ services:
       <<: *node-env
       OTEL_SERVICE_NAME: bp-api
       API_PORT: '3001'
+    volumes: [objectdata:/var/lib/businesspilot/objects]
     depends_on:
       postgres: { condition: service_healthy }
       ai-engine: { condition: service_healthy }
@@ -136,6 +168,7 @@ services:
       <<: *node-env
       OTEL_SERVICE_NAME: bp-worker
       WORKER_HEALTH_PORT: '3002'
+    volumes: [objectdata:/var/lib/businesspilot/objects]
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -178,3 +211,5 @@ volumes:
   pgdata:
   redisdata:
   miniodata:
+  objectdata:
+  keycloakdata:

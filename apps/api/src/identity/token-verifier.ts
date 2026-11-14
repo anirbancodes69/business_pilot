@@ -20,12 +20,14 @@ export class OidcTokenVerifier extends TokenVerifier {
     private readonly issuer: string | undefined,
     private readonly audience: string | undefined,
     private readonly keySource?: JWTVerifyGetKey, // injectable for tests
+    private readonly jwksUrl?: string,
   ) {
     super();
   }
 
   private async getKeys(issuer: string): Promise<JWTVerifyGetKey> {
     if (this.keySource) return this.keySource;
+    if (!this.keys && this.jwksUrl) this.keys = createRemoteJWKSet(new URL(this.jwksUrl));
     if (!this.keys) {
       const res = await fetch(`${issuer.replace(/\/$/, '')}/.well-known/openid-configuration`, {
         signal: AbortSignal.timeout(5000),

@@ -19,5 +19,6 @@ Each ADR records one significant decision. The status register is [DECISIONS.md]
 | [0013](ADR-0013-semantic-model-v1.md) | Semantic model v1 extensions | OPEN |
 | [0014](ADR-0014-m2-authentication-service-trust-and-rls-details.md) | Authentication, service trust and RLS details (M2) | Proposed |
 | [0015](ADR-0015-dummy-llm-and-object-storage-adapters.md) | Dummy LLM provider and object storage adapters (provisional) | Accepted (interim) |
+| [0016](ADR-0016-local-volume-storage-and-keycloak-for-development.md) | Local volume object storage and Keycloak for local development | Accepted (hosted choices OPEN) |
 
 When one ADR holds decisions with different statuses, its **Decision items** table gives the status of each item, using the IDs in DECISIONS.md.

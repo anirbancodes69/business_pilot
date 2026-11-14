@@ -22,11 +22,30 @@ docker compose --env-file .env -f infrastructure/docker/compose.yaml --profile t
 pnpm test:isolation                        # tenant isolation suite; needs the postgres service running and migrated (it migrates itself)
 ```
 
-For host-side commands (`pnpm test:isolation`, `pnpm --filter @businesspilot/api db:migrate`) the database must be reachable at `POSTGRES_HOST`/`POSTGRES_PORT` from `.env`. Authentication needs `OIDC_ISSUER_URL` and `OIDC_CLIENT_ID`; without them every authenticated route returns 401. Local macOS note: Python may ignore the editable-install `.pth` file when macOS flags it hidden. Tests therefore put `src` on the path explicitly.
+For host-side commands (`pnpm test:isolation`, `pnpm --filter @businesspilot/api db:migrate`) the database must be reachable at `POSTGRES_HOST`/`POSTGRES_PORT` from `.env`. Authentication needs `OIDC_ISSUER_URL` and `OIDC_CLIENT_ID`; without them every authenticated route returns 401. `.env.example` points them at the Keycloak in the stack (see [Signing in locally](#signing-in-locally)). An `.env` created before 2026-11-14 needs `KEYCLOAK_ADMIN_PASSWORD` added, and the three `OIDC_` values copied from `.env.example`, before `pnpm stack:up`. Local macOS note: Python may ignore the editable-install `.pth` file when macOS flags it hidden. Tests therefore put `src` on the path explicitly.
 
-Health: web `:3000/api/health`, api `:3001/health/live` and `/health/ready` (checks Postgres and ai-engine), worker `:3002/health/*` (container only), ai-engine `:8000/health`. Host ports bind to 127.0.0.1.
+Health: keycloak `:8080` (admin console), web `:3000/api/health`, api `:3001/health/live` and `/health/ready` (checks Postgres and ai-engine), worker `:3002/health/*` (container only), ai-engine `:8000/health`. Host ports bind to 127.0.0.1.
 
 Running apps outside Docker *(planned convenience; not verified)*: `pnpm --filter @businesspilot/api dev` compiles in watch mode, then `node apps/api/dist/main.js`; `uv run --directory apps/ai-engine uvicorn ai_engine.main:app`; `pnpm --filter @businesspilot/web dev`.
+
+## Signing in locally
+
+The stack runs Keycloak in development mode ([ADR-0016](docs/adr/ADR-0016-local-volume-storage-and-keycloak-for-development.md)). The realm `businesspilot` and the client `businesspilot` are created from `infrastructure/keycloak/businesspilot-realm.json`. No users are created.
+
+1. Open http://localhost:8080 and sign in as `admin` with `KEYCLOAK_ADMIN_PASSWORD` from `.env`.
+2. Switch to the realm `businesspilot` and create a user. Set email, first name and last name, mark the email as verified, and set a password that is not temporary.
+3. Get an access token (valid for five minutes) and call the api:
+
+```bash
+curl -s http://localhost:8080/realms/businesspilot/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=businesspilot -d scope=openid \
+  -d username=<username> --data-urlencode password=<password>
+curl -s http://localhost:3001/v1/me -H "Authorization: Bearer <access_token>"
+```
+
+The password grant is enabled only because no login screen exists yet. A new user has no tenant: there is no provisioning route or tool yet, so only `/v1/me` works for them.
+
+Uploaded files are stored on the `objectdata` volume, shared by the api and the worker. `docker compose down -v` deletes them, and the Keycloak users with them.
 
 ## Repository conventions
 
