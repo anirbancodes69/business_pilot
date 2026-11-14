@@ -16,11 +16,16 @@ const schema = z.object({
   // Authentication (D-OPEN-03). Unset = every authenticated route is rejected (fail closed).
   OIDC_ISSUER_URL: z.string().url().optional(),
   OIDC_CLIENT_ID: z.string().min(1).optional(),
+  // Optional: where to fetch the provider's signing keys when the issuer URL is not reachable from
+  // this process (in Compose the issuer is the browser-facing URL). The issuer is still verified.
+  OIDC_JWKS_URL: z.string().url().optional(),
   // Service trust (D-OPEN-15). Comma-separated list allows rotation with an overlap window.
   INTERNAL_SERVICE_TOKEN: z.string().min(16).optional(),
   REQUEST_CONTEXT_SIGNING_KEY: z.string().min(32).optional(),
-  // Object storage adapter (ADR-0015). Only the in-memory stand-in exists until D-OPEN-24 is decided.
-  OBJECT_STORAGE_DRIVER: z.enum(['dummy']).default('dummy'),
+  // Object storage adapter: `dummy` keeps objects in memory (ADR-0015); `local` writes them under
+  // OBJECT_STORAGE_LOCAL_DIR, a directory shared by the api and the worker (ADR-0016).
+  OBJECT_STORAGE_DRIVER: z.enum(['dummy', 'local']).default('dummy'),
+  OBJECT_STORAGE_LOCAL_DIR: z.string().min(1).optional(),
   // Connector egress guard (ADR-0004): private, loopback and link-local hosts are refused unless true.
   // For local development and tests only.
   CONNECTOR_ALLOW_PRIVATE_NETWORKS: z

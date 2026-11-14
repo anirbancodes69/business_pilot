@@ -1,5 +1,6 @@
-// Object storage port (ADR-0015). Product code depends on this interface only. The real S3-compatible
-// adapter is not chosen yet (D-OPEN-24); the dummy adapter below stands in for it.
+// Object storage port (ADR-0015). Product code depends on this interface only. Adapters: `dummy`
+// (in memory) and `local` (a directory on a shared volume, ADR-0016). The S3-compatible product for
+// hosted deployments is not chosen yet (D-OPEN-24).
 
 export interface ObjectStorage {
   /** True for a stand-in that keeps nothing durable. Callers must not treat the data as stored. */

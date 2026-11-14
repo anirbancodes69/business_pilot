@@ -23,7 +23,8 @@ What that means in practice:
 - **Works, through the API:** a tenant admin can publish a semantic model, activate an access policy, connect a PostgreSQL database or upload an Excel file, see the discovered schema, and review, approve and activate a mapping.
 - **Enforced and tested:** one tenant cannot read or change another tenant's data. This is checked by an isolation test suite that runs against a real PostgreSQL.
 - **Not built:** loading customer data into the analytical tables, asking questions, any AI call (the LLM provider is a stand-in that calls no model), and every screen.
-- **Not chosen yet:** the LLM provider, the identity provider and the object storage product. Uploaded files are held in memory and are lost on restart.
+- **Local stand-ins:** sign-in uses a Keycloak container, and uploaded files are kept on a Docker volume. Both work on one machine only.
+- **Not chosen yet:** the LLM provider, and the identity provider and object storage product for hosted environments.
 
 Milestone definitions and acceptance criteria are in [ROADMAP.md](ROADMAP.md).
 
@@ -40,7 +41,7 @@ pnpm check                       # lint, type-check and unit tests
 pnpm test:isolation              # tenant isolation suite; needs the postgres service running
 ```
 
-Signing in needs an OIDC provider configured in `.env`. Without one, every authenticated route returns 401.
+Sign-in uses the Keycloak in the stack. Create users in its admin console at http://localhost:8080 (user `admin`, password `KEYCLOAK_ADMIN_PASSWORD` from `.env`). A new user has no tenant until an operator creates one with `pnpm tenant:provision`. See [DEVELOPMENT.md](DEVELOPMENT.md#signing-in-locally).
 
 ## Who it is for
 
