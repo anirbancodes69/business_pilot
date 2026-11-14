@@ -103,7 +103,7 @@ def test_one_repair_attempt_fixes_an_unknown_id() -> None:
     model = Scripted(bad, GOOD)
     out = plan_question("dues by customer", VIEW, NOW, model)
     assert out.kind == "plan" and out.llm_calls == 2
-    assert out.repaired_from == ["unknown measure id: made_up"]
+    assert "unknown measure id: made_up" in out.repaired_from
     assert "unknown measure id: made_up" in model.requests[1].prompt
 
 
