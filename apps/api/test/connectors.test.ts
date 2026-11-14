@@ -26,16 +26,44 @@ describe('egress guard', () => {
     'fe80::1',
     '::ffff:127.0.0.1',
     '::ffff:10.0.0.1',
+    // The same internal addresses in other spellings: the guard must judge bytes, not text.
+    '::ffff:7f00:1',
+    '::ffff:a9fe:a9fe', // cloud metadata, hex form
+    '::ffff:0a00:0001',
+    '0:0:0:0:0:0:0:1',
+    '0:0:0:0:0:ffff:7f00:1',
+    '0000:0000:0000:0000:0000:0000:0000:0001',
+    '::7f00:1', // IPv4-compatible
+    '64:ff9b::7f00:1', // NAT64
+    '64:ff9b:1::1',
+    '2002:7f00:1::1', // 6to4 carrying 127.0.0.1
+    '2002:a00:1::1', // 6to4 carrying 10.0.0.1
+    '2001:0:1::1', // Teredo
+    '2001:db8::1', // documentation
+    'ff02::1', // multicast
+    'fec0::1', // site-local (deprecated)
+    '100::1', // discard prefix, not global unicast
+    'fe80::1%eth0', // scoped
+    'not-an-address',
   ])('blocks %s', (ip) => expect(isBlockedAddress(ip)).toBe(true));
 
-  it.each(['8.8.8.8', '172.32.0.1', '172.15.0.1', '203.0.113.7', '2606:4700:4700::1111'])(
-    'allows %s',
-    (ip) => expect(isBlockedAddress(ip)).toBe(false),
-  );
+  it.each([
+    '8.8.8.8',
+    '172.32.0.1',
+    '172.15.0.1',
+    '203.0.113.7',
+    '2606:4700:4700::1111',
+    '2606:4700:4700:0:0:0:0:1111',
+    '::ffff:8.8.8.8',
+    '::ffff:808:808',
+    '2002:808:808::1', // 6to4 carrying a public address
+  ])('allows %s', (ip) => expect(isBlockedAddress(ip)).toBe(false));
 
   it('refuses internal literals and unresolvable names unless private networks are allowed', async () => {
     await expect(resolveAllowedHost('169.254.169.254', false)).rejects.toThrow('not allowed');
     await expect(resolveAllowedHost('127.0.0.1', false)).rejects.toThrow('not allowed');
+    await expect(resolveAllowedHost('::ffff:7f00:1', false)).rejects.toThrow('not allowed');
+    await expect(resolveAllowedHost('0:0:0:0:0:0:0:1', false)).rejects.toThrow('not allowed');
     await expect(resolveAllowedHost('localhost', false)).rejects.toThrow('not allowed');
     await expect(resolveAllowedHost('no-such-host.invalid', false)).rejects.toThrow('resolved');
     await expect(resolveAllowedHost('127.0.0.1', true)).resolves.toBe('127.0.0.1');

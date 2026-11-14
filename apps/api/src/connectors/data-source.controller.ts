@@ -407,6 +407,16 @@ export class DataSourceController {
     const { schema } = await this.sources.discover(tenantId, dataSourceId);
     this.assertKeys(schema, name, row.key_columns);
     return this.db.tenantTx(tenantId, async (tx) => {
+      // Approve only the key that was just checked: the selection may have changed meanwhile.
+      const now = await tx
+        .selectFrom('core.data_source_object')
+        .select('key_columns')
+        .where('data_source_id', '=', dataSourceId)
+        .where('name', '=', name)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!now || JSON.stringify(now.key_columns) !== JSON.stringify(row.key_columns))
+        throw new ConflictException('the key selection was changed by someone else');
       await tx
         .updateTable('core.data_source_object')
         .set({ approved: true, approved_by: userId, approved_at: new Date() })

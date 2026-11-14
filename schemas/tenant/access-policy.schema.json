@@ -20,7 +20,7 @@
           "entities": { "type": "array", "items": { "type": "string" }, "description": "Semantic entity IDs, or '*' for all active entities." },
           "measures": { "type": "array", "items": { "type": "string" } },
           "dimensions": { "type": "array", "items": { "type": "string" } },
-          "permissions": { "type": "array", "items": { "type": "string" }, "description": "Non-data permissions, e.g. data_source:manage." }
+          "permissions": { "type": "array", "items": { "type": "string" }, "description": "Non-data permissions from the permission catalog, e.g. audit:read. Data grants (entity:, measure:, dimension:) are not accepted here. tenant:manage, user:manage, data_source:manage, mapping:approve, semantic_model:manage and semantic_model:publish cannot be granted by a policy; they come from a role assignment only." }
         }
       }
     },
@@ -34,7 +34,7 @@
         "properties": {
           "applies_to_roles": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
           "entity": { "type": "string", "examples": ["branch"] },
-          "attribute": { "type": "string", "examples": ["id"] },
+          "attribute": { "type": "string", "examples": ["id"], "description": "Must be a column known for the entity; an unknown column is rejected." },
           "operator": { "enum": ["eq", "in"] },
           "user_attribute": { "type": "string", "examples": ["assigned_branch_ids", "user_id"] }
         }
@@ -48,7 +48,7 @@
         "required": ["entity", "attribute", "mask"],
         "properties": {
           "entity": { "type": "string" },
-          "attribute": { "type": "string" },
+          "attribute": { "type": "string", "description": "Must be a column known for the entity; an unknown column is rejected." },
           "mask": { "enum": ["hide", "redact", "hash"] },
           "except_roles": { "type": "array", "items": { "type": "string" } }
         }

@@ -152,7 +152,7 @@
             "items": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/$defs/column"
               },
               "minItems": 2,
               "maxItems": 2
@@ -209,7 +209,7 @@
             ]
           },
           "attribute": {
-            "type": "string"
+            "$ref": "#/$defs/column"
           },
           "numerator": {
             "$ref": "#/$defs/id"
@@ -232,7 +232,7 @@
               ],
               "properties": {
                 "attribute": {
-                  "type": "string"
+                  "$ref": "#/$defs/column"
                 },
                 "operator": {
                   "enum": [
@@ -372,7 +372,7 @@
             "$ref": "#/$defs/id"
           },
           "attribute": {
-            "type": "string"
+            "$ref": "#/$defs/column"
           },
           "type": {
             "enum": [
@@ -472,6 +472,11 @@
     "id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "column": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,62}$",
+      "description": "A physical column name. Plain lower-case identifiers only: the plan compiler turns it into an SQL identifier."
     }
   }
 }

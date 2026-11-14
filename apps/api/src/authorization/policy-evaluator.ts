@@ -1,5 +1,5 @@
 import type { AuthorizationContext } from './authorization';
-import type { AccessPolicy } from './access-policy.validator';
+import { type AccessPolicy, isPolicyGrantable } from './access-policy.validator';
 
 interface ModelIds {
   entities: { id: string }[];
@@ -45,7 +45,9 @@ export function evaluatePolicy(input: {
     expand('entity', g.entities);
     expand('measure', g.measures);
     expand('dimension', g.dimensions);
-    for (const p of g.permissions ?? []) permissions.add(p);
+    // A stored policy is not trusted: restricted permissions and hand-written data grants are
+    // dropped here too, so a policy saved before this rule existed cannot grant them.
+    for (const p of g.permissions ?? []) if (isPolicyGrantable(p)) permissions.add(p);
   }
 
   const rowFilters: AuthorizationContext['row_filters'] = [];
