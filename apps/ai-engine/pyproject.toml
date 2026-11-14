@@ -42,6 +42,7 @@ select = ["E", "F", "I", "B", "UP", "S"]
 # Prompt text is one long string per rule on purpose.
 "src/ai_engine/planning/prompts.py" = ["E501"]
 "src/ai_engine/answer/explainer.py" = ["E501"]
+"src/ai_engine/planning/followup.py" = ["E501"]
 
 [tool.mypy]
 strict = true

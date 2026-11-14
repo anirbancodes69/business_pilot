@@ -13,7 +13,7 @@ def test_the_golden_set_is_valid_for_every_persona_view() -> None:
     results, pending = run(suite, ReplayProvider())
     failed = {r.id: r.problems for r in results if not r.ok}
     assert failed == {}
-    assert len(results) >= 40 and pending == 4
+    assert len(results) >= 50 and pending == 2
     cats = {r.category for r in results}
     assert {
         "metric",
@@ -24,14 +24,16 @@ def test_the_golden_set_is_valid_for_every_persona_view() -> None:
         "clarify",
         "out_of_scope",
         "adversarial",
+        "followup",
     } <= cats
-    assert all(r.llm_calls == 1 for r in results)  # nothing needed a repair
+    # nothing needed a repair; a follow-up case plans its first turn and classifies its second
+    assert all(r.llm_calls == (2 if r.category == "followup" else 1) for r in results)
 
 
 def test_pending_cases_are_declared_not_silently_dropped() -> None:
     suite = load_suite()
     pending = [c for c in suite.cases if c.status == "pending"]
-    assert {c.category for c in pending} == {"diagnostic", "followup"}
+    assert {c.category for c in pending} == {"diagnostic"}
     assert all(c.needs for c in pending)
 
 
@@ -41,7 +43,7 @@ def test_every_case_has_a_unique_id_and_what_it_needs() -> None:
     assert len(ids) == len(set(ids))
     for c in suite.cases:
         if c.status == "active":
-            assert c.question
+            assert c.question or c.turns, c.id
             assert c.expected != "plan" or c.expected_plan, c.id
 
 
@@ -206,3 +208,41 @@ def test_a_named_safe_outcome_counts_as_correct() -> None:
         case, now, Scripted({"outcome": "clarify", "clarification_question": "?"})
     ).ok
     assert not evaluate_case(case, now, Scripted({"outcome": "out_of_scope"})).ok
+
+
+def test_follow_up_cases_are_scored_on_the_change_and_the_resulting_plan() -> None:
+    now = datetime.fromisoformat(load_suite().as_of)
+    case = next(c for c in load_suite().cases if c.id == "fu-001")
+    first = {
+        "outcome": "plan",
+        "plan": {
+            "intent": "ranking",
+            "measures": ["revenue"],
+            "dimensions": [{"id": "branch.name"}],
+            "time_range": {"relative": "last_month"},
+        },
+    }
+    right = {"delta": {"type": "refine_filter", "dimension": "branch.name", "values": ["Nashik"]}}
+    wrong = {"delta": {"type": "refine_filter", "dimension": "branch.name", "values": ["Pune"]}}
+    other = {"delta": {"type": "top_n", "limit": 3}}
+    assert evaluate_case(case, now, Scripted(first, right)).ok
+    bad = evaluate_case(case, now, Scripted(first, wrong))
+    assert not bad.ok and any("delta values" in p for p in bad.problems)
+    assert not evaluate_case(case, now, Scripted(first, other)).ok
+    assert not evaluate_case(case, now, Scripted(first, {"delta": {"type": "new_question"}})).ok
+
+
+def test_a_follow_up_that_is_really_a_new_question_must_not_be_applied() -> None:
+    now = datetime.fromisoformat(load_suite().as_of)
+    case = next(c for c in load_suite().cases if c.id == "fu-007")
+    first = {
+        "outcome": "plan",
+        "plan": {
+            "intent": "metric",
+            "measures": ["revenue"],
+            "time_range": {"relative": "last_month"},
+        },
+    }
+    assert evaluate_case(case, now, Scripted(first, {"delta": {"type": "new_question"}})).ok
+    applied = {"delta": {"type": "change_metric", "measures": ["outstanding_receivables"]}}
+    assert not evaluate_case(case, now, Scripted(first, applied)).ok

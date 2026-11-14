@@ -20,7 +20,7 @@ class Case(_Loose):
     status: Literal["active", "pending"] = "active"
     persona: str = "owner"
     question: str | None = None
-    expected: Literal["plan", "clarify", "out_of_scope"] = "plan"
+    expected: Literal["plan", "clarify", "out_of_scope", "followup"] = "plan"
     planner_expected: Literal["plan", "no_plan"] = "plan"
     expected_intent: str | None = None
     expected_plan: dict[str, Any] | None = None
@@ -105,6 +105,25 @@ def match_plan(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
     return problems
 
 
+def match_delta(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
+    """Differences between the expected and the understood follow-up change. Only what the case
+    states is compared (a case that names no `mode` accepts either)."""
+    problems: list[str] = []
+    for key, want in expected.items():
+        if key == "time_range":
+            continue  # the period is checked through the resulting plan, whatever form it took
+        got = actual.get(key)
+        if key in ("values", "measures"):
+            same = set(map(str, want)) == set(map(str, got or []))
+        elif key == "dimensions":
+            same = [d["id"] for d in want] == [d["id"] for d in got or []]
+        else:
+            same = want == got
+        if not same:
+            problems.append(f"delta {key}: wanted {want}, got {got}")
+    return problems
+
+
 class CaseResult(BaseModel):
     id: str
     category: str
@@ -114,6 +133,8 @@ class CaseResult(BaseModel):
     problems: list[str] = []
     # Diagnostics for tuning: why the first reply needed a repair, and the plan that was produced.
     repaired_from: list[str] = []
+    # The clarifying question the system asked, when it asked one (user-facing text).
+    clarification: str | None = None
     actual_plan: dict[str, Any] | None = None
     llm_calls: int = 0
     input_tokens: int = 0

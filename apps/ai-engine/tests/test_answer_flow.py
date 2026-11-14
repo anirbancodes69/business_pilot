@@ -56,7 +56,7 @@ def test_happy_path_renders_numbers_from_the_ledger_only() -> None:
     assert r.summary == "Asha Traders owes the most, ₹9.00 lakh."
     assert r.verified_facts[0]["statement"] == "Top: ₹9.00 lakh"
     assert r.execution["grounding"] == "passed" and r.execution["tool_calls"] == 1
-    assert r.execution["prompt_versions"] == {"planner": "planner-v4", "explainer": "explainer-v2"}
+    assert r.execution["prompt_versions"] == {"planner": "planner-v5", "explainer": "explainer-v2"}
     # usage is counted for metering: counts only, one planner and one explainer call
     assert r.execution["usage"] == {
         "planner": {"calls": 1, "input_tokens": 100, "output_tokens": 20},

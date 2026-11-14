@@ -39,6 +39,9 @@ const stored = {
     dimensions: ['customer.name', 'branch.name'],
     filters: [{ dimension: 'customer.segment', operator: 'eq', values: ['retail'] }],
     time_range: { relative: 'last_month' },
+    time_grains: { 'invoice.invoice_date': 'month' },
+    sort: [{ by: 'revenue', direction: 'desc' }],
+    limit: 5,
   },
   last_analysis_type: 'ranking',
   evidence_refs: ['ev_0a1b2c3d'],
@@ -75,6 +78,35 @@ describe('analytical context (D-21)', () => {
     const v2 = { ...viewFor(['owner']), semantic_model_version: 2 };
     expect(revalidateContext(stored, v2)).toEqual({ context: undefined, reset: true });
     expect(revalidateContext({ nonsense: true }, viewFor(['owner'])).reset).toBe(true);
+  });
+});
+
+describe('analytical context: follow-up fields', () => {
+  it('keeps time grains, sort and limit, and refuses odd values', () => {
+    expect(analyticalContextSchema.safeParse(stored).success).toBe(true);
+    const bad = (focus: object) =>
+      analyticalContextSchema.safeParse({ ...stored, focus: { ...stored.focus, ...focus } })
+        .success;
+    expect(bad({ time_grains: { 'invoice.invoice_date': 'decade' } })).toBe(false);
+    expect(bad({ limit: 1000 })).toBe(false);
+    expect(bad({ sort: [{ by: 'revenue', direction: 'sideways' }] })).toBe(false);
+  });
+
+  it('drops a sort on something the user can no longer see', () => {
+    const viewer = revalidateContext(
+      stored,
+      viewFor(['sales_manager'], { assigned_branch_ids: ['b1'] }),
+    ).context;
+    // outstanding_receivables is gone for a sales manager; revenue stays, so a sort by revenue stays
+    expect(viewer?.focus?.sort).toEqual([{ by: 'revenue', direction: 'desc' }]);
+    const gone = revalidateContext(
+      {
+        ...stored,
+        focus: { ...stored.focus, sort: [{ by: 'outstanding_receivables', direction: 'desc' }] },
+      },
+      viewFor(['sales_manager'], { assigned_branch_ids: ['b1'] }),
+    ).context;
+    expect(gone?.focus?.sort).toEqual([]);
   });
 });
 

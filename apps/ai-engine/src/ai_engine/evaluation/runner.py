@@ -5,20 +5,40 @@ import json
 from datetime import datetime
 from typing import Any
 
+from ai_engine.answer.context import build_context
 from ai_engine.evaluation.golden import (
     Case,
     CaseResult,
     Suite,
     load_view,
+    match_delta,
     match_plan,
 )
 from ai_engine.llm import LlmProvider, LlmRequest, LlmResponse
+from ai_engine.planning.followup import plan_follow_up
 from ai_engine.planning.planner import plan_question
 from ai_engine.planning.view import AuthorizedView
 
 
+def plan_reply(expected: dict[str, Any], intent: str | None) -> dict[str, Any]:
+    plan: dict[str, Any] = {
+        "intent": intent or "metric",
+        "measures": expected["measures"],
+        "dimensions": expected.get("dimensions", []),
+        "filters": expected.get("filters", []),
+        "time_range": expected.get("time_range") or {"start": "2024-11-16", "end": "2026-11-15"},
+        "sort": [expected["sort"]] if expected.get("sort") else [],
+    }
+    if expected.get("comparison"):
+        plan["comparison"] = {"type": "custom", "time_range": expected["comparison"]}
+    if expected.get("limit"):
+        plan["limit"] = expected["limit"]
+    return {"outcome": "plan", "plan": plan}
+
+
 class ReplayProvider:
-    """Answers each question with the case's own expected plan. Costs nothing.
+    """Answers each question with the case's own expected plan (or expected follow-up change).
+    Costs nothing.
 
     It checks the golden set and the harness, not a model: every expected plan must be valid for the
     persona's authorized view and must come back unchanged through the planner's validation.
@@ -33,6 +53,12 @@ class ReplayProvider:
         c = self.case
         if c is None:
             raise RuntimeError("no case is set")
+        if "classify a follow-up" in request.system:
+            second = (c.turns or [{}, {}])[1]
+            return self._reply({"delta": second["expected_delta"]})
+        if c.expected == "followup":
+            first = (c.turns or [{}])[0]
+            return self._reply(plan_reply(first["expected_plan"], first.get("expected_intent")))
         if c.expected == "clarify":
             reply: dict[str, Any] = {
                 "outcome": "clarify",
@@ -41,24 +67,65 @@ class ReplayProvider:
         elif c.expected == "out_of_scope" or c.planner_expected == "no_plan":
             reply = {"outcome": "out_of_scope"}
         else:
-            e = c.expected_plan or {}
-            plan: dict[str, Any] = {
-                "intent": c.expected_intent or "metric",
-                "measures": e["measures"],
-                "dimensions": e.get("dimensions", []),
-                "filters": e.get("filters", []),
-                "time_range": e.get("time_range") or {"start": "2024-11-16", "end": "2026-11-15"},
-                "sort": [e["sort"]] if e.get("sort") else [],
-            }
-            if e.get("comparison"):
-                plan["comparison"] = {"type": "custom", "time_range": e["comparison"]}
-            if e.get("limit"):
-                plan["limit"] = e["limit"]
-            reply = {"outcome": "plan", "plan": plan}
+            reply = plan_reply(c.expected_plan or {}, c.expected_intent)
+        return self._reply(reply)
+
+    @staticmethod
+    def _reply(reply: dict[str, Any]) -> LlmResponse:
         return LlmResponse(text=json.dumps(reply), model="replay", input_tokens=0, output_tokens=0)
 
 
+def evaluate_followup(case: Case, now: datetime, provider: LlmProvider) -> CaseResult:
+    """Two turns: plan the first question, then understand the follow-up as a typed change."""
+    view = AuthorizedView.model_validate(load_view(case.persona))
+    first, second = (case.turns or [{}, {}])[:2]
+    problems: list[str] = []
+    o1 = plan_question(first["question"], view, now, provider)
+    result = CaseResult(
+        id=case.id,
+        category=case.category,
+        outcome=o1.kind,
+        ok=False,
+        llm_calls=o1.llm_calls,
+        input_tokens=o1.input_tokens,
+        output_tokens=o1.output_tokens,
+    )
+    if o1.kind != "plan":
+        result.problems = [f"turn 1: wanted a plan, got {o1.kind}"]
+        result.clarification = o1.clarification_question
+        return result
+    if match := match_plan(first["expected_plan"], o1.plan or {}):
+        problems += [f"turn 1: {m}" for m in match]
+    context = build_context(o1, view.semantic_model_version, None, [])
+    follow, spent = plan_follow_up(second["question"], view, now, provider, context)
+    result.llm_calls += spent.calls
+    result.input_tokens += spent.input_tokens
+    result.output_tokens += spent.output_tokens
+    want = second["expected_delta"]
+    if want["type"] == "new_question":
+        if follow is not None:
+            problems.append(f"turn 2: wanted a new question, got {follow.delta}")
+        result.outcome = "new_question" if follow is None else follow.kind
+    elif follow is None or follow.kind != "plan":
+        problems.append(f"turn 2: wanted a follow-up plan, got {follow.kind if follow else 'none'}")
+        result.outcome = follow.kind if follow else "none"
+    else:
+        result.outcome = "plan"
+        problems += match_delta(want, follow.delta or {})
+        if second.get("expected_plan"):
+            problems += [
+                f"turn 2: {m}" for m in match_plan(second["expected_plan"], follow.plan or {})
+            ]
+    result.problems = problems
+    result.ok = not problems
+    return result
+
+
 def evaluate_case(case: Case, now: datetime, provider: LlmProvider) -> CaseResult:
+    if case.expected == "followup":
+        if isinstance(provider, ReplayProvider):
+            provider.case = case
+        return evaluate_followup(case, now, provider)
     view = AuthorizedView.model_validate(load_view(case.persona))
     if isinstance(provider, ReplayProvider):
         provider.case = case
@@ -95,6 +162,7 @@ def evaluate_case(case: Case, now: datetime, provider: LlmProvider) -> CaseResul
         intent_ok=intent_ok,
         problems=problems,
         repaired_from=out.repaired_from,
+        clarification=out.clarification_question,
         actual_plan=out.plan if not ok or out.repaired_from else None,
         llm_calls=out.llm_calls,
         input_tokens=out.input_tokens,

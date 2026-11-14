@@ -73,6 +73,8 @@ def main() -> int:
     for r in results:
         if not r.ok:
             print(f"  FAIL {r.id}: {'; '.join(r.problems)[:240]}")
+            if r.clarification:
+                print(f"       asked: {r.clarification}")
             if r.actual_plan:
                 p = r.actual_plan
                 print(

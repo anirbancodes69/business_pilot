@@ -1,6 +1,6 @@
 {
   "suite": "wholesale_v0",
-  "version": 1,
+  "version": 2,
   "as_of": "2026-11-15T10:00:00+05:30",
   "dataset": "synthetic distributor, seed 42 (apps/api/src/dev/synthetic-distributor.ts)",
   "notes": "Expected results are computed by an independent oracle in the api tests, not stored here. Plans are compared field by field; dates are the resolved absolute dates for as_of. Cases with status pending need features that do not exist yet.",
@@ -879,18 +879,50 @@
     {
       "id": "fu-001",
       "category": "followup",
-      "status": "pending",
+      "status": "active",
       "persona": "owner",
-      "needs": "E6.9 follow-up resolution",
+      "expected": "followup",
       "turns": [
         {
-          "question": "Revenue by branch last month"
+          "question": "Revenue by branch last month",
+          "expected_intent": "ranking",
+          "expected_plan": {
+            "measures": ["revenue"],
+            "dimensions": [
+              {
+                "id": "branch.name"
+              }
+            ],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
+            }
+          }
         },
         {
           "question": "And Nashik?",
-          "expected_context_delta": {
-            "refine_filter": {
-              "branch.name": ["Nashik"]
+          "expected_delta": {
+            "type": "refine_filter",
+            "dimension": "branch.name",
+            "values": ["Nashik"]
+          },
+          "expected_plan": {
+            "measures": ["revenue"],
+            "dimensions": [
+              {
+                "id": "branch.name"
+              }
+            ],
+            "filters": [
+              {
+                "dimension": "branch.name",
+                "operator": "eq",
+                "values": ["Nashik"]
+              }
+            ],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
             }
           }
         }
@@ -899,17 +931,276 @@
     {
       "id": "fu-002",
       "category": "followup",
-      "status": "pending",
+      "status": "active",
       "persona": "owner",
-      "needs": "E6.9 follow-up resolution",
+      "expected": "followup",
       "turns": [
         {
-          "question": "Top 5 customers by dues"
+          "question": "Top 5 customers by dues",
+          "expected_intent": "ranking",
+          "expected_plan": {
+            "measures": ["outstanding_receivables"],
+            "dimensions": [
+              {
+                "id": "customer.name"
+              }
+            ],
+            "sort": {
+              "by": "outstanding_receivables",
+              "direction": "desc"
+            },
+            "limit": 5
+          }
         },
         {
           "question": "Same for last quarter",
-          "expected_context_delta": {
-            "change_time_range": "last_quarter"
+          "expected_delta": {
+            "type": "change_time_range",
+            "time_range": {
+              "relative": "last_quarter"
+            }
+          },
+          "expected_plan": {
+            "measures": ["outstanding_receivables"],
+            "dimensions": [
+              {
+                "id": "customer.name"
+              }
+            ],
+            "time_range": {
+              "start": "2026-07-01",
+              "end": "2026-09-30"
+            },
+            "limit": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": "fu-003",
+      "category": "followup",
+      "status": "active",
+      "persona": "owner",
+      "expected": "followup",
+      "turns": [
+        {
+          "question": "Revenue last month",
+          "expected_intent": "metric",
+          "expected_plan": {
+            "measures": ["revenue"],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
+            }
+          }
+        },
+        {
+          "question": "And for Pune?",
+          "expected_delta": {
+            "type": "refine_filter",
+            "dimension": "branch.name",
+            "values": ["Pune"]
+          },
+          "expected_plan": {
+            "measures": ["revenue"],
+            "filters": [
+              {
+                "dimension": "branch.name",
+                "operator": "eq",
+                "values": ["Pune"]
+              }
+            ],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "fu-004",
+      "category": "followup",
+      "status": "active",
+      "persona": "owner",
+      "expected": "followup",
+      "turns": [
+        {
+          "question": "Revenue by branch this fiscal year",
+          "expected_intent": "ranking",
+          "expected_plan": {
+            "measures": ["revenue"],
+            "dimensions": [
+              {
+                "id": "branch.name"
+              }
+            ],
+            "time_range": {
+              "start": "2026-04-01",
+              "end": "2026-11-15"
+            }
+          }
+        },
+        {
+          "question": "Break that down by customer segment",
+          "expected_delta": {
+            "type": "change_dimension",
+            "dimensions": [
+              {
+                "id": "customer.segment"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fu-005",
+      "category": "followup",
+      "status": "active",
+      "persona": "owner",
+      "expected": "followup",
+      "turns": [
+        {
+          "question": "How did revenue in October compare with September?",
+          "expected_intent": "comparison",
+          "expected_plan": {
+            "measures": ["revenue"],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
+            },
+            "comparison": {
+              "start": "2026-09-01",
+              "end": "2026-09-30"
+            }
+          }
+        },
+        {
+          "question": "Why did it drop?",
+          "expected_delta": {
+            "type": "ask_why"
+          },
+          "expected_plan": {
+            "measures": ["revenue"],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
+            },
+            "comparison": {
+              "start": "2026-09-01",
+              "end": "2026-09-30"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "fu-006",
+      "category": "followup",
+      "status": "active",
+      "persona": "owner",
+      "expected": "followup",
+      "turns": [
+        {
+          "question": "Units sold last month",
+          "expected_intent": "metric",
+          "expected_plan": {
+            "measures": ["units_sold"],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
+            }
+          }
+        },
+        {
+          "question": "What about revenue?",
+          "expected_delta": {
+            "type": "change_metric",
+            "measures": ["revenue"]
+          },
+          "expected_plan": {
+            "measures": ["revenue"],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "fu-007",
+      "category": "followup",
+      "status": "active",
+      "persona": "owner",
+      "expected": "followup",
+      "turns": [
+        {
+          "question": "Revenue last month",
+          "expected_intent": "metric",
+          "expected_plan": {
+            "measures": ["revenue"],
+            "time_range": {
+              "start": "2026-10-01",
+              "end": "2026-10-31"
+            }
+          }
+        },
+        {
+          "question": "Which customers owe the most?",
+          "expected_delta": {
+            "type": "new_question"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fu-008",
+      "category": "followup",
+      "status": "active",
+      "persona": "owner",
+      "expected": "followup",
+      "turns": [
+        {
+          "question": "Top 5 customers by revenue this fiscal year",
+          "expected_intent": "ranking",
+          "expected_plan": {
+            "measures": ["revenue"],
+            "dimensions": [
+              {
+                "id": "customer.name"
+              }
+            ],
+            "time_range": {
+              "start": "2026-04-01",
+              "end": "2026-11-15"
+            },
+            "sort": {
+              "by": "revenue",
+              "direction": "desc"
+            },
+            "limit": 5
+          }
+        },
+        {
+          "question": "Just the top 3",
+          "expected_delta": {
+            "type": "top_n",
+            "limit": 3
+          },
+          "expected_plan": {
+            "measures": ["revenue"],
+            "dimensions": [
+              {
+                "id": "customer.name"
+              }
+            ],
+            "time_range": {
+              "start": "2026-04-01",
+              "end": "2026-11-15"
+            },
+            "limit": 3
           }
         }
       ]

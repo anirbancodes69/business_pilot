@@ -4,6 +4,7 @@ Every number in the response comes from the evidence ledger. If the explainer ca
 that passes the grounding check, the answer is degraded to facts written by code.
 """
 
+import logging
 import time
 from collections.abc import Callable
 from typing import Any
@@ -12,7 +13,9 @@ from ai_engine.analysis.calculations import abs_change, pct_change
 from ai_engine.analysis.evidence import Evidence, EvidenceLedger, ResultRef
 from ai_engine.analysis.grounding import referenced_ids
 from ai_engine.answer import explainer
+from ai_engine.answer.context import build_context
 from ai_engine.answer.findings import FINDINGS_ID, build_findings
+from ai_engine.answer.interpretation import interpret
 from ai_engine.answer.models import (
     AnswerRequest,
     AnswerResponse,
@@ -24,10 +27,14 @@ from ai_engine.answer.tools import DataTools, ToolError
 from ai_engine.investigation.engine import Investigation, investigate
 from ai_engine.llm import LlmProvider
 from ai_engine.planning import prompts as planner_prompts
+from ai_engine.planning.followup import plan_follow_up
 from ai_engine.planning.planner import PlannerOutcome, plan_question
 
 MAX_ROWS = 50
 PREVIEW_FACTS = 5
+
+
+log = logging.getLogger("ai_engine.answer")
 
 
 def _unavailable(
@@ -51,28 +58,8 @@ def _unavailable(
 
 
 def _context(req: AnswerRequest, outcome: PlannerOutcome, refs: list[str]) -> dict[str, Any]:
-    raw = outcome.raw_plan
     previous = (req.analytical_context or {}).get("turn", 0)
-    focus: dict[str, Any] = {}
-    if raw is not None:
-        focus = {
-            "metrics": raw.measures,
-            "dimensions": [d.id for d in raw.dimensions],
-            "filters": [f.model_dump() for f in raw.filters],
-            "time_range": raw.time_range.model_dump(exclude_none=True),
-        }
-        if raw.comparison:
-            focus["comparison"] = raw.comparison.model_dump(exclude_none=True)
-    ctx: dict[str, Any] = {
-        "semantic_model_version": req.authorized_view.semantic_model_version,
-        "turn": int(previous) + 1 if isinstance(previous, int) else 1,
-        "last_analysis_type": raw.intent if raw else "clarify",
-        "open_hypotheses": [],
-        "evidence_refs": refs[:50],
-    }
-    if focus:
-        ctx["focus"] = focus
-    return ctx
+    return build_context(outcome, req.authorized_view.semantic_model_version, previous, refs)
 
 
 def _build_evidence(
@@ -348,8 +335,20 @@ def answer_question(
 ) -> AnswerResponse:
     started = time.monotonic()
     view = req.authorized_view
-    outcome = plan_question(req.question, view, req.resolved_now, provider)
-    versions = {"planner": planner_prompts.PROMPT_VERSION}
+    # With a previous analysis in the conversation, a follow-up is first understood as a typed
+    # change to it (D-21). Anything else is planned from scratch; the classifier's usage is kept.
+    follow, spent = plan_follow_up(
+        req.question, view, req.resolved_now, provider, req.analytical_context
+    )
+    outcome = (
+        follow
+        if follow is not None
+        else spent.add_to(plan_question(req.question, view, req.resolved_now, provider))
+    )
+    if outcome.kind == "failed":
+        # Fixed texts and field paths only: never the question, a prompt or a model reply.
+        log.warning("planning failed after %d model calls: %s", outcome.llm_calls, outcome.problems)
+    versions = {"planner": outcome.prompt_version}
     explained: list[explainer.Explained] = []
 
     def finish(d: dict[str, Any]) -> AnswerResponse:
@@ -368,6 +367,8 @@ def answer_question(
             },
         }
         d["execution"]["duration_ms"] = int((time.monotonic() - started) * 1000)
+        if outcome.plan is not None:
+            d.setdefault("interpretation", interpret(outcome.plan, view))
         d["analytical_context"] = d.get("analytical_context") or _context(req, outcome, [])
         return AnswerResponse.model_validate(d)
 

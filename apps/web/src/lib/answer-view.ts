@@ -40,6 +40,8 @@ export interface Answer {
   recommendations?: { text: string }[];
   unknowns?: string[];
   clarification_question?: string;
+  /** How the question was understood, built by the server from the plan that ran. */
+  interpretation?: string;
   tables?: AnswerTable[];
   evidence?: Evidence[];
   execution?: { plan_hashes?: string[]; semantic_model_version?: number; grounding?: string };

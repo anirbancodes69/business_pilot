@@ -95,6 +95,11 @@ export function AnswerCard({
         )}
       </div>
 
+      {a.interpretation && (
+        <p className="interpretation">
+          <span>{S.showing}</span> {a.interpretation}
+        </p>
+      )}
       <p className="headline">{v.summary}</p>
       {v.clarification && <p className="clarify">{v.clarification}</p>}
 

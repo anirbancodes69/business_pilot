@@ -439,6 +439,20 @@ a {
   font-size: 0.8rem;
   color: var(--ink-2);
 }
+.interpretation {
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+}
+.interpretation span {
+  font-weight: 600;
+  color: var(--ink);
+  margin-right: 0.25rem;
+}
 .headline {
   margin: 0;
   font-size: 1.2rem;

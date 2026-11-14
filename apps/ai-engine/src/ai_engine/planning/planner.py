@@ -37,6 +37,8 @@ class PlannerOutcome:
     prompt_version: str = PROMPT_VERSION
     raw_plan: RawPlan | None = None
     models: list[str] = field(default_factory=list)
+    # The typed change a follow-up was understood as (None for a question planned from scratch).
+    delta: dict[str, Any] | None = None
 
 
 def plan_question(

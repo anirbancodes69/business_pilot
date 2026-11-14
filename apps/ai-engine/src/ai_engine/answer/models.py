@@ -73,6 +73,7 @@ class AnswerResponse(BaseModel):
     unknowns: list[str] = []
     clarification_question: str | None = None
     analytical_context: dict[str, Any] | None = None
+    interpretation: str | None = None
     tables: list[dict[str, Any]] = []
     evidence: list[dict[str, Any]] = []
     sources: list[dict[str, Any]] = []

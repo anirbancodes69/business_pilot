@@ -491,6 +491,49 @@
             },
             "comparison": {
               "type": "object"
+            },
+            "time_grains": {
+              "type": "object",
+              "description": "Time grain of each time dimension in `dimensions`.",
+              "additionalProperties": {
+                "enum": [
+                  "day",
+                  "week",
+                  "month",
+                  "quarter",
+                  "fiscal_quarter",
+                  "year",
+                  "fiscal_year"
+                ]
+              }
+            },
+            "sort": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "by",
+                  "direction"
+                ],
+                "properties": {
+                  "by": {
+                    "type": "string"
+                  },
+                  "direction": {
+                    "enum": [
+                      "asc",
+                      "desc"
+                    ]
+                  }
+                }
+              }
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
             }
           }
         },
@@ -644,6 +687,11 @@
           }
         }
       }
+    },
+    "interpretation": {
+      "type": "string",
+      "maxLength": 400,
+      "description": "How the question was understood, in plain words and built by code from the executed plan (for example: Revenue by branch, 1 Oct 2026 to 31 Oct 2026, branch is Nashik). Shown to the user so assumptions are visible."
     }
   }
 }

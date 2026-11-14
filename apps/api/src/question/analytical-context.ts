@@ -26,6 +26,17 @@ export const analyticalContextSchema = z.strictObject({
         )
         .max(10)
         .optional(),
+      time_grains: z
+        .record(
+          z.string().max(80),
+          z.enum(['day', 'week', 'month', 'quarter', 'fiscal_quarter', 'year', 'fiscal_year']),
+        )
+        .optional(),
+      sort: z
+        .array(z.strictObject({ by: id, direction: z.enum(['asc', 'desc']) }))
+        .max(3)
+        .optional(),
+      limit: z.number().int().min(1).max(100).optional(),
       time_range: z.record(z.string(), z.unknown()).optional(),
       comparison: z.record(z.string(), z.unknown()).optional(),
     })
@@ -65,5 +76,10 @@ export function revalidateContext(
     dimensions: ctx.focus.dimensions?.filter((d) => dims.has(d)),
     filters: ctx.focus.filters?.filter((f) => dims.has(f.dimension)),
   };
+  // A sort that refers to something the user can no longer see is dropped with it.
+  if (focus?.sort) {
+    const kept = new Set([...(focus.metrics ?? []), ...(focus.dimensions ?? [])]);
+    focus.sort = focus.sort.filter((s) => kept.has(s.by));
+  }
   return { context: { ...ctx, focus }, reset: false };
 }
