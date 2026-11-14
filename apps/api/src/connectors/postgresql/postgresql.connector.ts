@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { Client, type ClientConfig } from 'pg';
+import { Client, type ClientConfig, escapeIdentifier, escapeLiteral } from 'pg';
 import { z } from 'zod';
 import {
   AuthError,
@@ -11,6 +11,8 @@ import {
   type DiscoveredObject,
   type DiscoveredSchema,
   EgressDeniedError,
+  type ReadOptions,
+  type SourceRow,
   PermissionError,
   TransientError,
 } from '../connector';
@@ -173,6 +175,40 @@ export class PostgresConnector implements Connector {
         return { ok: false, errors: [error.message], privilege_warnings: [] };
       throw error;
     }
+  }
+
+  async readSnapshot(
+    ctx: ConnectorCallContext,
+    object: string,
+    columns: string[],
+    batchSize: number,
+    onBatch: (rows: SourceRow[]) => Promise<void>,
+    options?: ReadOptions,
+  ): Promise<void> {
+    await this.withClient(ctx, async (client, config) => {
+      // Identifiers come from an approved mapping and are quoted. Values are never interpolated.
+      const list = columns.map((c) => escapeIdentifier(c)).join(', ');
+      const from = `${escapeIdentifier(config.schema)}.${escapeIdentifier(object)}`;
+      let where = '';
+      if (options?.updatedAtField !== undefined && options.since !== undefined) {
+        // DECLARE cannot take parameters, so the timestamp is checked strictly and quoted.
+        if (!/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(options.since))
+          throw new TransientError('invalid cursor');
+        const f = escapeIdentifier(options.updatedAtField);
+        where = ` WHERE ${f} >= ${escapeLiteral(options.since)}::timestamptz ORDER BY ${f}`;
+      }
+      await client.query(
+        `DECLARE bp_snapshot NO SCROLL CURSOR FOR SELECT ${list} FROM ${from}${where}`,
+      );
+      for (;;) {
+        if (ctx.deadline - Date.now() <= 0) throw new TransientError('the sync ran too long');
+        const page = await client.query<SourceRow>(
+          `FETCH FORWARD ${Math.trunc(batchSize)} FROM bp_snapshot`,
+        );
+        if (page.rows.length === 0) break;
+        await onBatch(page.rows);
+      }
+    });
   }
 
   async discoverSchema(ctx: ConnectorCallContext): Promise<DiscoveredSchema> {

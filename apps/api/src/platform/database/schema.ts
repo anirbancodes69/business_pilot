@@ -158,6 +158,73 @@ export interface EntityMappingTable {
   activated_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
 }
 
+export interface SyncRunTable {
+  id: Generated<string>;
+  tenant_id: string;
+  data_source_id: string;
+  status: Generated<'queued' | 'running' | 'succeeded' | 'partially_failed' | 'failed' | 'paused'>;
+  trigger: 'manual' | 'schedule' | 'upload' | 'activation';
+  started_at: Generated<Date>;
+  finished_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  stats: Json;
+  error_code: ColumnType<string | null, string | null | undefined, string | null>;
+}
+
+export interface SyncCheckpointTable {
+  tenant_id: string;
+  data_source_id: string;
+  source_object: string;
+  cursor: Json;
+  schema_fingerprint: string | null;
+  last_run_id: string | null;
+  updated_at: ColumnType<Date, Date | string | undefined, Date | string>;
+}
+
+export interface DatasetTable {
+  tenant_id: string;
+  data_source_id: string;
+  canonical_entity: string;
+  data_version: ColumnType<string, string | number | undefined, string | number>;
+  bumped_run_id: string | null;
+  status: Generated<'never_synced' | 'fresh' | 'failed' | 'paused'>;
+  last_attempt_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  last_successful_sync_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+  row_count: ColumnType<string | null, string | number | null | undefined, string | number | null>;
+}
+
+export interface SyncDeadLetterTable {
+  id: Generated<string>;
+  tenant_id: string;
+  run_id: string;
+  data_source_id: string;
+  source_object: string;
+  source_key: string | null;
+  field: string | null;
+  error_code: string;
+  created_at: Generated<Date>;
+}
+
+export interface OutboxEventTable {
+  id: Generated<string>;
+  tenant_id: string;
+  type: string;
+  aggregate_ref: string;
+  payload: Json;
+  created_at: Generated<Date>;
+  published_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+}
+
+export interface NotificationTable {
+  id: Generated<string>;
+  tenant_id: string;
+  kind: 'sync.paused_schema_drift' | 'sync.auth_failed' | 'sync.failed';
+  severity: 'info' | 'warning' | 'critical';
+  data_source_id: string | null;
+  metadata: Json;
+  created_at: Generated<Date>;
+  read_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
+}
+
 export interface Database {
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
@@ -174,4 +241,10 @@ export interface Database {
   'core.data_source_upload': DataSourceUploadTable;
   'core.data_source_object': DataSourceObjectTable;
   'core.entity_mapping': EntityMappingTable;
+  'core.sync_run': SyncRunTable;
+  'core.sync_checkpoint': SyncCheckpointTable;
+  'core.dataset': DatasetTable;
+  'core.sync_dead_letter': SyncDeadLetterTable;
+  'core.outbox_event': OutboxEventTable;
+  'core.notification': NotificationTable;
 }

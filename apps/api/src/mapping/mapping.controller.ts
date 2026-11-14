@@ -15,6 +15,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { z } from 'zod';
+import { SyncQueue } from '../sync/sync-queue';
 import { AuditService } from '../audit/audit.service';
 import { PermissionGuard, RequirePermission } from '../authorization/permissions';
 import { DataSourceService } from '../connectors/data-source.service';
@@ -51,6 +52,7 @@ export class MappingController {
     @Inject(DatabaseService) private readonly db: DatabaseService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(DataSourceService) private readonly sources: DataSourceService,
+    @Inject(SyncQueue) private readonly queue: SyncQueue,
   ) {}
 
   @Get()
@@ -361,7 +363,7 @@ export class MappingController {
     );
     if (!stillApproved) throw new ConflictException('the object is no longer approved');
     const now = new Date();
-    return this.db.tenantTx(tenantId, async (tx) => {
+    const activated = await this.db.tenantTx(tenantId, async (tx) => {
       await tx
         .updateTable('core.entity_mapping')
         .set({ status: 'superseded', updated_at: now })
@@ -392,6 +394,13 @@ export class MappingController {
       });
       return { id: current.id, status: 'active' as const };
     });
+    // Activation starts the first sync (D-10). A queue problem does not undo the activation.
+    const syncQueued = await this.queue.enqueueQuietly({
+      tenantId,
+      dataSourceId,
+      trigger: 'activation',
+    });
+    return { ...activated, sync_queued: syncQueued };
   }
 
   private async load(tenantId: string, dataSourceId: string, id: string) {

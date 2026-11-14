@@ -32,6 +32,7 @@ import {
 } from '../platform/object-storage/object-storage';
 import { ConnectorConfigError, SchemaError, type DiscoveredSchema } from './connector';
 import { assertSafeXlsx, MAX_UPLOAD_BYTES } from './excel/zip-guard';
+import { SyncQueue } from '../sync/sync-queue';
 import { ConnectorRegistry } from './connector-registry';
 import { CREDENTIAL_PURPOSE, DataSourceService } from './data-source.service';
 
@@ -101,6 +102,7 @@ export class DataSourceController {
     @Inject(ENVELOPE_TOKEN) private readonly crypto: EnvelopeCrypto | null,
     @Inject(OBJECT_STORAGE_TOKEN) private readonly storage: ObjectStorage,
     @Inject(DataSourceService) private readonly sources: DataSourceService,
+    @Inject(SyncQueue) private readonly queue: SyncQueue,
   ) {}
 
   @Get('connectors')
@@ -299,7 +301,7 @@ export class DataSourceController {
     const key = `uploads/${dataSourceId}/${uploadId}.xlsx`;
     const sha256 = createHash('sha256').update(file).digest('hex');
     await this.storage.put(tenantId, key, file);
-    return this.db.tenantTx(tenantId, async (tx) => {
+    const stored = await this.db.tenantTx(tenantId, async (tx) => {
       await tx
         .insertInto('core.data_source_upload')
         .values({
@@ -322,6 +324,13 @@ export class DataSourceController {
       });
       return { upload_id: uploadId, size_bytes: file.length, sha256 };
     });
+    // A new file is a new version of the data: sync it (a no-op until a mapping is active).
+    const syncQueued = await this.queue.enqueueQuietly({
+      tenantId,
+      dataSourceId,
+      trigger: 'upload',
+    });
+    return { ...stored, sync_queued: syncQueued };
   }
 
   @Get('data-sources/:id/objects')

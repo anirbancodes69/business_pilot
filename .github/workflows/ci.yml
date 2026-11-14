@@ -96,7 +96,7 @@ jobs:
       - name: Start PostgreSQL with the real role setup
         run: |
           ./scripts/setup-local-env.sh
-          docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --wait postgres
+          docker compose --env-file .env -f infrastructure/docker/compose.yaml up -d --wait postgres redis
       - name: Tenant isolation tests
         run: pnpm test:isolation
       - name: Logs on failure

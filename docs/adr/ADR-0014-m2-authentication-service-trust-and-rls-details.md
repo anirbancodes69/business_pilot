@@ -16,7 +16,7 @@ Milestone 2 needs users to sign in, a way to choose the active tenant, and a way
 4. **P-20 RLS implementation details.**
    - Tenant context is set with `set_config('app.tenant_id', value, true)`. This is the same as `SET LOCAL` (it lasts only for the transaction), but it accepts a bound parameter. Context helper functions treat an empty string as "no context", because a pooled connection keeps an empty string after a transaction-local setting expires.
    - `core.app_user` (global identity) and `core.permission` (global catalog) hold no tenant data and have no RLS. They are the only tables outside RLS, and the isolation test TI-04 enforces that list. These are not exceptions to tenant isolation. The application accesses `app_user` only through the identity module.
-   - The local database has a separate bootstrap superuser used only for administration. `bp_owner` owns the database and runs migrations but is not a superuser. `bp_app` and `bp_system` cannot bypass RLS. `bp_system` has no login until the worker needs it (Milestone 5), and it can read and update tenant status only.
+   - The local database has a separate bootstrap superuser used only for administration. `bp_owner` owns the database and runs migrations but is not a superuser. `bp_app` and `bp_system` cannot bypass RLS. `bp_system` can read and update tenant status only. It got a login in Milestone 5 for the worker sweeper (ADR-0017, D-19).
    - System roles and permissions are seeded by a migration that switches FORCE off for the two role tables during that migration only.
    - Tenant provisioning runs under the new tenant's own context, so no bypass is needed.
 

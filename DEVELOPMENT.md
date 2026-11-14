@@ -24,6 +24,8 @@ pnpm test:isolation                        # tenant isolation suite; needs the p
 
 For host-side commands (`pnpm test:isolation`, `pnpm --filter @businesspilot/api db:migrate`) the database must be reachable at `POSTGRES_HOST`/`POSTGRES_PORT` from `.env`. Authentication needs `OIDC_ISSUER_URL` and `OIDC_CLIENT_ID`; without them every authenticated route returns 401. `.env.example` points them at the Keycloak in the stack (see [Signing in locally](#signing-in-locally)). An `.env` created before 2026-11-14 needs `KEYCLOAK_ADMIN_PASSWORD` added, and the three `OIDC_` values copied from `.env.example`, before `pnpm stack:up`. Local macOS note: Python may ignore the editable-install `.pth` file when macOS flags it hidden. Tests therefore put `src` on the path explicitly.
 
+**Existing local volumes (2026-11-14, ADR-0017):** the worker needs `POSTGRES_SYSTEM_PASSWORD` in `.env` (see `.env.example`). The role is created only when the database volume is empty, so an older stack needs `pnpm stack:down` and `docker compose ... down -v` once (this deletes local data).
+
 Health: keycloak `:8080` (admin console), web `:3000/api/health`, api `:3001/health/live` and `/health/ready` (checks Postgres and ai-engine), worker `:3002/health/*` (container only), ai-engine `:8000/health`. Host ports bind to 127.0.0.1.
 
 Running apps outside Docker *(planned convenience; not verified)*: `pnpm --filter @businesspilot/api dev` compiles in watch mode, then `node apps/api/dist/main.js`; `uv run --directory apps/ai-engine uvicorn ai_engine.main:app`; `pnpm --filter @businesspilot/web dev`.
