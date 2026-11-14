@@ -25,7 +25,7 @@ export const S = {
     facts: 'Verified facts',
     calculations: 'Calculations',
     explanations: 'Possible explanations',
-    recommendations: 'Recommendations',
+    recommendations: 'Suggested next steps',
     unknowns: 'What we could not tell',
   },
   hypothesisNote: 'Hypotheses, not verified by your data.',

@@ -717,6 +717,15 @@ tbody tr:hover {
   display: grid;
   gap: 0.25rem;
 }
+.block.recommendations {
+  background: var(--brand-soft);
+  border-left: 4px solid var(--brand);
+  padding: 0.7rem 0.9rem;
+  border-radius: 6px;
+}
+.block.recommendations h3 {
+  color: var(--brand);
+}
 .block.explanations {
   background: var(--hypo-soft);
   border-left: 4px solid var(--hypo);

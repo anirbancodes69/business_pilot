@@ -657,7 +657,8 @@
                   "share_of_total",
                   "contribution_to_delta",
                   "sum_of_changes",
-                  "one_period_change"
+                  "one_period_change",
+                  "sum_of_values"
                 ]
               },
               "input_ids": {

@@ -60,6 +60,13 @@ def one_period_change(ledger: EvidenceLedger, value: Evidence, appeared: bool) -
     return ledger.add_derived(signed, value.unit, "one_period_change", (value.id,))
 
 
+def sum_of_values(ledger: EvidenceLedger, values: list[Evidence]) -> Evidence:
+    """The total of several figures that were read from the data (for example the largest few)."""
+    total = sum((_d(v) for v in values), Decimal(0))
+    unit = values[0].unit if values else None
+    return ledger.add_derived(total, unit, "sum_of_values", tuple(v.id for v in values))
+
+
 REGISTRY: tuple[FormulaId, ...] = (
     "pct_change",
     "abs_change",
@@ -67,4 +74,5 @@ REGISTRY: tuple[FormulaId, ...] = (
     "contribution_to_delta",
     "sum_of_changes",
     "one_period_change",
+    "sum_of_values",
 )

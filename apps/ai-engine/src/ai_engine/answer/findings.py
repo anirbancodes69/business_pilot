@@ -25,7 +25,21 @@ MAX_SUM_MEMBERS = 30
 
 
 @dataclass
+class DriverFinding:
+    """The evidence behind one row of the findings table, for recommendations to cite."""
+
+    depth: int
+    where: str
+    label: str  # the member's own label, for example "Nashik"
+    parent: str | None
+    change: Evidence
+    share: Evidence | None
+
+
+@dataclass
 class Findings:
+    drivers: list[DriverFinding] = field(default_factory=list)
+    total_change: Evidence | None = None
     data: list[dict[str, Any]] = field(default_factory=list)  # for the explainer
     derived: list[tuple[str, Evidence]] = field(default_factory=list)
     table: dict[str, Any] | None = None
@@ -89,6 +103,7 @@ def build_findings(inv: Investigation, ledger: EvidenceLedger, view: AuthorizedV
         _ref(total.result, total.previous_set, total.column, 0),
     )
     t_change = abs_change(ledger, t_cur, t_prev)
+    out.total_change = t_change
     out.derived.append((f"Change in {inv.label}", t_change))
     pct = pct_change(ledger, t_cur, t_prev)
     if pct is not None:
@@ -156,6 +171,9 @@ def build_findings(inv: Investigation, ledger: EvidenceLedger, view: AuthorizedV
             "evidence_ids": [e.id for e in (change, share) if e is not None],
         }
         out.facts.append(facts)
+        out.drivers.append(
+            DriverFinding(d.depth, where, d.member.label, d.parent_label, change, share)
+        )
 
     out.data = [{"id": FINDINGS_ID, "period": "investigation", "rows": rows}]
     out.table = {

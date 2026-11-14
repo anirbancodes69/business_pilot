@@ -29,6 +29,14 @@ from ai_engine.llm import LlmProvider
 from ai_engine.planning import prompts as planner_prompts
 from ai_engine.planning.followup import plan_follow_up
 from ai_engine.planning.planner import PlannerOutcome, plan_question
+from ai_engine.recommendations.playbooks import (
+    Recommendation,
+    for_comparison,
+    for_customer_ranking,
+    for_investigation,
+    needs_total,
+    recommend,
+)
 
 MAX_ROWS = 50
 PREVIEW_FACTS = 5
@@ -55,6 +63,13 @@ def _unavailable(
         },
         **extra,
     }
+
+
+def _recs(items: list[Recommendation]) -> list[dict[str, Any]]:
+    return [
+        {"text": r.text, "playbook_id": r.playbook_id, "evidence_ids": list(r.evidence_ids)}
+        for r in items
+    ]
 
 
 def _context(req: AnswerRequest, outcome: PlannerOutcome, refs: list[str]) -> dict[str, Any]:
@@ -313,6 +328,7 @@ def _diagnosis(
         facts, hypotheses = f.facts, []
         summary, status = "Here is what drove the change.", "answered_facts_only"
         unknowns.append("A written explanation was not available for this answer.")
+    recs = recommend(for_investigation(f, view, inv.measure))
     base["evidence"] = [e.model_dump(mode="json", exclude_none=True) for e in ledger.items()]
     return finish(
         {
@@ -320,6 +336,7 @@ def _diagnosis(
             "status": status,
             "summary": summary,
             "verified_facts": facts,
+            "recommendations": _recs(recs),
             "derived_calculations": [
                 {"label": label, "evidence_id": ev.id} for label, ev in f.derived
             ],
@@ -520,6 +537,22 @@ def answer_question(
         summary, status = "Here are the results from your data.", "answered_facts_only"
         unknowns.append("A written explanation was not available for this answer.")
 
+    # Recommendations come from playbooks over the findings (D-23); each cites evidence.
+    total_result: ToolResult | None = None
+    total_plan = needs_total(view, plan, result)
+    if total_plan is not None:
+        try:  # one cheap extra data call, only for a playbook; a failure just means no suggestion
+            total_result = tools.execute_plan(req.request_context, request_id, total_plan)
+            execution["tool_calls"] += 1
+            execution["plan_hashes"].append(total_result.plan_hash)
+        except ToolError:
+            total_result = None
+    recs = recommend(
+        [
+            *for_comparison(view, derived),
+            *for_customer_ranking(view, plan, result, ledger, total_result),
+        ]
+    )
     refs = [ev.id for ev in ledger.items()]
     return finish(
         {
@@ -527,6 +560,7 @@ def answer_question(
             "status": status,
             "summary": summary,
             "verified_facts": facts,
+            "recommendations": _recs(recs),
             "derived_calculations": [
                 {"label": label, "evidence_id": ev.id} for label, ev in derived
             ],

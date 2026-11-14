@@ -42,6 +42,10 @@ A hybrid. Code decides **whether** a recommendation exists, and the LLM only hel
 - Playbooks live in the template and are versioned with the semantic model.
 - New evaluation metric: every recommendation cites at least one finding (hard gate).
 
+## Implementation note (2026-11-15)
+
+Built in `apps/ai-engine/src/ai_engine/recommendations/playbooks.py`. In this first version the wording is **written by code from templates**, not by the model: it is cheaper, cannot invent a number, and is deterministic for tests. Model wording over the same findings stays possible later (it would need the same placeholder discipline). Four playbooks: a material decline (or a wrong-direction rise) in a plain figure suggests asking why; money owed concentrated in the top three customers suggests prioritising follow-up (it fetches the overall total with one extra data call when the ranking was cut short); a dominant part of an investigated change suggests reviewing it first; and a dominant sub-part suggests what to check inside it. Thresholds (10% change, 50% share, top three) are constants in code, **not yet the tenant's business rules**. At most two recommendations per answer; a recommendation with no evidence id is dropped by `recommend`, and tests check that every number in a recommendation's text appears in the evidence it cites.
+
 ## Revisit conditions
 
 - Pilot users ask for recommendations the playbooks cannot produce.

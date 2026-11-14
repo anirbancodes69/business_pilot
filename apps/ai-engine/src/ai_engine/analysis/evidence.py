@@ -17,6 +17,7 @@ FormulaId = Literal[
     "contribution_to_delta",
     "sum_of_changes",
     "one_period_change",
+    "sum_of_values",
 ]
 EVIDENCE_ID = re.compile(r"^ev_[a-z0-9]{4,16}$")
 

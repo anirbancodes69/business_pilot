@@ -133,6 +133,18 @@ describe('answer view', () => {
     expect(v.sections[0]?.note).toBeUndefined();
   });
 
+  it('shows suggested next steps after the hypotheses, separate from verified facts', () => {
+    const v = buildAnswerView({
+      ...base,
+      verified_facts: [{ statement: 'Nashik: -₹1.48 lakh' }],
+      possible_explanations: [{ text: 'A promotion may have ended.' }],
+      recommendations: [{ text: 'Branch: Nashik accounts for 71.7% of the decline.' }],
+    });
+    expect(v.sections.map((s) => s.key)).toEqual(['facts', 'explanations', 'recommendations']);
+    expect(v.sections[2]?.title).toBe('Suggested next steps');
+    expect(v.sections[2]?.note).toBeUndefined();
+  });
+
   it('says plainly when an answer is degraded, not authorized or out of scope', () => {
     expect(buildAnswerView({ ...base, status: 'answered_facts_only' }).banner).toEqual({
       tone: 'warning',
