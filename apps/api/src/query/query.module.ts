@@ -24,6 +24,6 @@ import { PlanExecutor } from './plan-executor';
         ]),
     },
   ],
-  exports: [PlanExecutor],
+  exports: [PlanExecutor, RequestContextSigner],
 })
 export class QueryModule {}

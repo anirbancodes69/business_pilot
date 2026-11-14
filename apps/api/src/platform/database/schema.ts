@@ -225,7 +225,26 @@ export interface NotificationTable {
   read_at: ColumnType<Date | null, Date | string | undefined, Date | string | null>;
 }
 
+export interface ConversationTable {
+  tenant_id: string;
+  id: Generated<string>;
+  user_id: string;
+  created_at: Generated<Date>;
+}
+
+export interface ConversationTurnTable {
+  tenant_id: string;
+  conversation_id: string;
+  turn: number;
+  analytical_context: Json;
+  status: string;
+  plan_hashes: ColumnType<unknown, string | undefined, string>;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
+  'core.conversation': ConversationTable;
+  'core.conversation_turn': ConversationTurnTable;
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
   'core.permission': PermissionTable;
