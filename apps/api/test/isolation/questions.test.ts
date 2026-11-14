@@ -11,6 +11,7 @@ import {
 import type { Env } from '../../src/platform/config/env';
 import { RequestContextSigner } from '../../src/platform/service-auth/request-context';
 import { QUESTIONS_PER_WINDOW, QuestionService } from '../../src/question/question.service';
+import { UsageController } from '../../src/question/usage.controller';
 import { createFixture, env, type Fixture } from './harness';
 
 // E6.2 api side: conversations, signed request contexts and the analytical context (D-21).
@@ -38,7 +39,16 @@ const answered = (context?: unknown) => ({
   status: 'answered',
   summary: 'ok',
   analytical_context: context,
-  execution: { plan_hashes: ['h1'] },
+  execution: {
+    plan_hashes: ['h1'],
+    grounding: 'passed',
+    model_ids: ['m-plan', 'm-explain'],
+    duration_ms: 1200,
+    usage: {
+      planner: { calls: 1, input_tokens: 1000, output_tokens: 200 },
+      explainer: { calls: 1, input_tokens: 500, output_tokens: 100 },
+    },
+  },
 });
 
 beforeAll(async () => {
@@ -93,6 +103,71 @@ const ask = async (over: Record<string, unknown> = {}) =>
     question: 'Which customers have the highest dues?',
     ...over,
   });
+
+describe('usage metering (E6.8)', () => {
+  it('records counts and names for each answered question, and nothing else', async () => {
+    reply = () => answered({ semantic_model_version: 1, turn: 1 });
+    const before = await count('core.ai_execution');
+    await ask({ question: 'SECRET-QUESTION-TEXT' });
+    expect(await count('core.ai_execution')).toBe(before + 1);
+    const rows = await f.db.tenantTx(f.A.tenantId, (tx) =>
+      tx
+        .selectFrom('core.ai_execution')
+        .selectAll()
+        .orderBy('created_at', 'desc')
+        .limit(1)
+        .execute(),
+    );
+    const row = rows[0];
+    expect(row).toMatchObject({
+      status: 'answered',
+      grounding: 'passed',
+      planner_calls: 1,
+      explainer_calls: 1,
+      input_tokens: 1500,
+      output_tokens: 300,
+      duration_ms: 1200,
+    });
+    expect(JSON.stringify(row)).not.toContain('SECRET');
+  });
+
+  it('rows are tenant-isolated and cannot be changed or removed', async () => {
+    expect(await count('core.ai_execution', f.B.tenantId)).toBe(0);
+    await expect(
+      f.db.tenantTx(f.A.tenantId, (tx) =>
+        sql`update core.ai_execution set status = 'x'`.execute(tx),
+      ),
+    ).rejects.toThrow(/permission denied/);
+    await expect(
+      f.db.tenantTx(f.A.tenantId, (tx) => sql`delete from core.ai_execution`.execute(tx)),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it('a malformed usage report makes the whole answer invalid (502), never trusted', async () => {
+    reply = () => ({
+      status: 'answered',
+      execution: { usage: { planner: { calls: -5, input_tokens: 'many', output_tokens: 1 } } },
+    });
+    await expect(ask()).rejects.toMatchObject({ status: 502 });
+  });
+});
+
+describe('usage summary endpoint (E6.8)', () => {
+  it('sums this workspace only, in counts', async () => {
+    reply = () => answered({ semantic_model_version: 1, turn: 1 });
+    await ask();
+    const ctrl = new UsageController(f.db);
+    const req = (tenantId: string) => ({ auth: { tenantId } }) as never;
+    const a = await ctrl.summary(req(f.A.tenantId), '30');
+    expect(a.questions).toBeGreaterThan(0);
+    expect(a.model_calls).toBe(a.questions * 2);
+    expect(a.input_tokens).toBe(a.questions * 1500);
+    expect(a.by_status.answered).toBe(a.questions);
+    const b = await ctrl.summary(req(f.B.tenantId), '30');
+    expect(b).toMatchObject({ questions: 0, model_calls: 0, input_tokens: 0, by_status: {} });
+    await expect(ctrl.summary(req(f.A.tenantId), '0')).rejects.toThrow();
+  });
+});
 
 describe('questions (E6.2, api side)', () => {
   it('a tenant without a published model gets a 404 and nothing is stored', async () => {
@@ -256,7 +331,10 @@ function claims0(body: Sent): string {
   return payload.request_id;
 }
 
-async function count(table: 'core.conversation' | 'core.conversation_turn', tenant = f.A.tenantId) {
+async function count(
+  table: 'core.conversation' | 'core.conversation_turn' | 'core.ai_execution',
+  tenant = f.A.tenantId,
+) {
   return f.db.tenantTx(tenant, async (tx) => {
     const r = await tx
       .selectFrom(table)

@@ -32,10 +32,23 @@ const STATUSES = [
 ] as const;
 
 // Only what the api needs from the answer. The rest is passed on to the caller untouched.
+const usageEntry = z.object({
+  calls: z.number().int().min(0).max(20),
+  input_tokens: z.number().int().min(0).max(10_000_000),
+  output_tokens: z.number().int().min(0).max(10_000_000),
+});
 const answerShape = z.looseObject({
   status: z.enum(STATUSES),
   analytical_context: z.unknown().optional(),
-  execution: z.looseObject({ plan_hashes: z.array(z.string()).max(20).optional() }).optional(),
+  execution: z
+    .looseObject({
+      plan_hashes: z.array(z.string()).max(20).optional(),
+      grounding: z.string().max(40).optional(),
+      model_ids: z.array(z.string().max(100)).max(10).optional(),
+      duration_ms: z.number().int().min(0).max(3_600_000).optional(),
+      usage: z.object({ planner: usageEntry, explainer: usageEntry }).optional(),
+    })
+    .optional(),
 });
 
 export const QUESTIONS_PER_WINDOW = 20;
@@ -189,6 +202,27 @@ export class QuestionService {
           analytical_context: JSON.stringify(stored),
           status: answer.data.status,
           plan_hashes: JSON.stringify(answer.data.execution?.plan_hashes ?? []),
+        })
+        .execute();
+      const exec = answer.data.execution;
+      await tx
+        .insertInto('core.ai_execution')
+        .values({
+          tenant_id: tenantId,
+          user_id: userId,
+          conversation_id: conversationId,
+          turn: turnNumber,
+          request_id: requestId,
+          status: answer.data.status,
+          grounding: exec?.grounding ?? null,
+          planner_calls: exec?.usage?.planner.calls ?? 0,
+          explainer_calls: exec?.usage?.explainer.calls ?? 0,
+          input_tokens:
+            (exec?.usage?.planner.input_tokens ?? 0) + (exec?.usage?.explainer.input_tokens ?? 0),
+          output_tokens:
+            (exec?.usage?.planner.output_tokens ?? 0) + (exec?.usage?.explainer.output_tokens ?? 0),
+          model_ids: JSON.stringify(exec?.model_ids ?? []),
+          duration_ms: exec?.duration_ms ?? null,
         })
         .execute();
       // Identifiers and a status only. Never the question, the answer or any figure.

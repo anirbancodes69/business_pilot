@@ -55,6 +55,12 @@ def test_happy_path_renders_numbers_from_the_ledger_only() -> None:
     assert r.verified_facts[0]["statement"] == "Top: ₹9.00 lakh"
     assert r.execution["grounding"] == "passed" and r.execution["tool_calls"] == 1
     assert r.execution["prompt_versions"] == {"planner": "planner-v2", "explainer": "explainer-v2"}
+    # usage is counted for metering: counts only, one planner and one explainer call
+    assert r.execution["usage"] == {
+        "planner": {"calls": 1, "input_tokens": 100, "output_tokens": 20},
+        "explainer": {"calls": 1, "input_tokens": 100, "output_tokens": 20},
+    }
+    assert isinstance(r.execution["duration_ms"], int) and r.execution["duration_ms"] >= 0
     # one planner call and one explainer call, and the api saw an absolute-dated plan
     assert [q.role for q in model.requests] == ["planner", "explainer"]
     assert tools.calls[0]["plan"]["time_range"]["start"] == "2026-04-01"
@@ -99,6 +105,7 @@ def test_untrustworthy_text_degrades_to_facts_written_by_code() -> None:
         "Vikram Stores: ₹50,000",
     ]
     assert len(model.requests) == 3  # planner, explainer, one regeneration; never more
+    assert r.execution["usage"]["explainer"]["calls"] == 2
 
 
 def test_comparison_without_grouping_gets_derived_calculations() -> None:
@@ -144,6 +151,12 @@ def test_not_authorized_and_failures_never_reach_the_explainer() -> None:
         model = Scripted(GOOD)
         r = answer_question(request(), RID, model, FakeTools(kind))  # type: ignore[arg-type]
         assert r.status == status and len(model.requests) == 1
+        assert r.execution["usage"]["explainer"] == {
+            "calls": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+        }
+        assert r.execution["usage"]["planner"]["calls"] == 1
         assert r.verified_facts == [] and r.evidence == []
 
 
@@ -163,6 +176,7 @@ def test_clarification_and_out_of_scope_make_no_data_call() -> None:
         tools,
     )
     assert c.status == "clarification_needed" and c.clarification_question == "Which period?"
+    assert c.execution["usage"]["planner"]["calls"] == 1
     o = answer_question(request(), RID, Scripted({"outcome": "out_of_scope"}), tools)
     assert o.status == "out_of_scope" and tools.calls == []
 

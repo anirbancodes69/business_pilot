@@ -4,6 +4,7 @@ Every number in the response comes from the evidence ledger. If the explainer ca
 that passes the grounding check, the answer is degraded to facts written by code.
 """
 
+import time
 from typing import Any
 
 from ai_engine.analysis.calculations import abs_change, pct_change
@@ -228,12 +229,28 @@ def _degraded_facts(result: ToolResult, ledger: EvidenceLedger) -> list[dict[str
 def answer_question(
     req: AnswerRequest, request_id: str, provider: LlmProvider, tools: DataTools
 ) -> AnswerResponse:
+    started = time.monotonic()
     view = req.authorized_view
     outcome = plan_question(req.question, view, req.resolved_now, provider)
     versions = {"planner": planner_prompts.PROMPT_VERSION}
+    explained: list[explainer.Explained] = []
 
     def finish(d: dict[str, Any]) -> AnswerResponse:
         d["execution"]["model_ids"] = outcome.models + d["execution"].get("model_ids", [])
+        ex = explained[0] if explained else None
+        d["execution"]["usage"] = {
+            "planner": {
+                "calls": outcome.llm_calls,
+                "input_tokens": outcome.input_tokens,
+                "output_tokens": outcome.output_tokens,
+            },
+            "explainer": {
+                "calls": ex.llm_calls if ex else 0,
+                "input_tokens": ex.input_tokens if ex else 0,
+                "output_tokens": ex.output_tokens if ex else 0,
+            },
+        }
+        d["execution"]["duration_ms"] = int((time.monotonic() - started) * 1000)
         d["analytical_context"] = d.get("analytical_context") or _context(req, outcome, [])
         return AnswerResponse.model_validate(d)
 
@@ -338,6 +355,7 @@ def answer_question(
         ledger,
         provider,
     )
+    explained.append(ex)
     execution["model_ids"] = ex.models
     unknowns = list(ex.reply.unknowns) if ex.reply else []
     if result.truncated:

@@ -331,6 +331,68 @@
           "items": {
             "type": "string"
           }
+        },
+        "usage": {
+          "type": "object",
+          "description": "Model usage for this answer (E6.8). Counts only; no prompt or reply text.",
+          "additionalProperties": false,
+          "required": [
+            "planner",
+            "explainer"
+          ],
+          "properties": {
+            "planner": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "calls",
+                "input_tokens",
+                "output_tokens"
+              ],
+              "properties": {
+                "calls": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "input_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "output_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            },
+            "explainer": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "calls",
+                "input_tokens",
+                "output_tokens"
+              ],
+              "properties": {
+                "calls": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "input_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "output_tokens": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Time ai-engine spent on the answer, including the api tool call."
         }
       }
     },

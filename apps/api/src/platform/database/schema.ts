@@ -242,9 +242,28 @@ export interface ConversationTurnTable {
   created_at: Generated<Date>;
 }
 
+export interface AiExecutionTable {
+  tenant_id: string;
+  id: Generated<string>;
+  user_id: string;
+  conversation_id: string;
+  turn: number;
+  request_id: string;
+  status: string;
+  grounding: string | null;
+  planner_calls: number;
+  explainer_calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  model_ids: ColumnType<unknown, string | undefined, string>;
+  duration_ms: number | null;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   'core.conversation': ConversationTable;
   'core.conversation_turn': ConversationTurnTable;
+  'core.ai_execution': AiExecutionTable;
   'core.tenant': TenantTable;
   'core.app_user': AppUserTable;
   'core.permission': PermissionTable;
