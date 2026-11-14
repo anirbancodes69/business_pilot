@@ -53,3 +53,17 @@ Milestone 2 needs users to sign in, a way to choose the active tenant, and a way
 
 - Customer-hosted deployments need their own identity provider or stronger service authentication.
 - A pilot customer requires single sign-on that the chosen provider cannot support.
+
+## Addendum 2026-11-14: what an access policy may grant (D-16, Accepted)
+
+Found by the Milestone 1 to 4 audit. The access policy document lets a role be given non-data permissions (`role_grants[].permissions`). These were not checked, so anyone holding `tenant:manage` could give any role any permission, including the separate approval permissions that D-10 relies on.
+
+Rule, implemented in `apps/api/src/authorization/access-policy.validator.ts` and `policy-evaluator.ts`:
+
+- A policy may grant only permissions that exist in the permission catalog.
+- It may never grant `tenant:manage`, `user:manage`, `data_source:manage`, `mapping:approve`, `semantic_model:manage` or `semantic_model:publish`. These come from a role assignment only, which is audited as `membership.roles_changed`.
+- Data grants are made through `entities`, `measures` and `dimensions` (checked against the published model), not by writing `entity:x:read` as a permission.
+- The evaluator applies the same rule to stored policies, so an older policy cannot grant them either.
+- Row rules and column masks must name a column known for the entity. An unknown column is rejected, because a mask on a misspelt column would protect nothing.
+
+Confirmed by the product owner on 2026-11-14, with `data_source:manage` and `semantic_model:manage` added to the restricted list because both let a role reshape what data the tenant exposes. The rest of this ADR (P-18 to P-20) stays Proposed.

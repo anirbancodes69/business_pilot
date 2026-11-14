@@ -380,4 +380,26 @@ describe('authorized view and access policy (E3.3, E3.4)', () => {
     expect(text).toContain('unknown role: ghost');
     expect(text).toContain('unknown measures nope');
   });
+
+  it('rejects a policy that grants an approval permission or masks a column that does not exist', async () => {
+    const own = { token: 'ownerA', tenant: f.A.tenantId, method: 'POST' };
+    const bad = await call('/v1/access-policies', {
+      ...own,
+      body: {
+        role_grants: [{ role: 'viewer', permissions: ['mapping:approve', 'made:up'] }],
+        column_rules: [{ entity: 'customer', attribute: 'gstinn', mask: 'hide' }],
+      },
+    });
+    expect(bad.status).toBe(400);
+    const text = await bad.text();
+    expect(text).toContain('permission mapping:approve cannot be granted by a policy');
+    expect(text).toContain('unknown permission made:up');
+    expect(text).toContain('unknown attribute customer.gstinn');
+    // a catalog permission that is not restricted is accepted
+    const ok = await call('/v1/access-policies', {
+      ...own,
+      body: { role_grants: [{ role: 'finance_manager', permissions: ['audit:read'] }] },
+    });
+    expect(ok.status).toBe(201);
+  });
 });

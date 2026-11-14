@@ -52,6 +52,31 @@ describe('semantic model validator', () => {
     expect(validateSemanticModel(m).problems.length).toBeGreaterThan(0);
   });
 
+  it('accepts only plain identifiers as column names (they become SQL identifiers in the compiler)', () => {
+    const unsafe = [
+      'net_amount) FROM analytics.customer; --',
+      'x"; drop table y; --',
+      'Net Amount',
+      '',
+    ];
+    for (const name of unsafe) {
+      const measure = validModel();
+      measure.measures[0]!.attribute = name;
+      expect(validateSemanticModel(measure).problems.length).toBeGreaterThan(0);
+      const dimension = validModel();
+      dimension.dimensions[0]!.attribute = name;
+      expect(validateSemanticModel(dimension).problems.length).toBeGreaterThan(0);
+      const join = validModel();
+      join.relationships[0]!.on = [[name, 'id']];
+      expect(validateSemanticModel(join).problems.length).toBeGreaterThan(0);
+      const filter = validModel() as ReturnType<typeof validModel> & {
+        measures: { filters?: unknown }[];
+      };
+      filter.measures[0]!.filters = [{ attribute: name, operator: 'eq', values: ['x'] }];
+      expect(validateSemanticModel(filter).problems.length).toBeGreaterThan(0);
+    }
+  });
+
   it('checks references and duplicates', () => {
     const m = validModel();
     m.measures[0]!.entity = 'nope';

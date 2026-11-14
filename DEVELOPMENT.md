@@ -1,6 +1,6 @@
 # DEVELOPMENT.md — Development guide
 
-> **Status:** the Milestone 1 skeleton exists (health endpoints only). Commands marked *(planned)* do not work yet.
+> **Status:** Milestones 1 to 4 exist at API level (see [CURRENT.md](CURRENT.md)). Commands marked *(planned)* do not work yet.
 
 ## Prerequisites
 
@@ -82,7 +82,7 @@ See [.env.example](.env.example). Placeholders only. Secrets for shared environm
 
 ## CI
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request: documentation and schema checks; `apps` (lint, type-check, `pnpm test`, build for all three apps); gitleaks secret scanning; dependency audit (`pnpm audit --prod` at high severity, `pip-audit`); and a Compose smoke test that must reach all-healthy. All jobs passed on GitHub on 2026-11-11 (see [CURRENT.md](CURRENT.md)). It also runs on pushes to `feature/**`.
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push to `main` and every pull request: documentation and schema checks; `apps` (lint, type-check, `pnpm test`, build for all three apps); `tenant-isolation` (`pnpm test:isolation` against a real PostgreSQL); gitleaks secret scanning; dependency audit (`pnpm audit --prod` at high severity, `pip-audit`); and a Compose smoke test that must reach all-healthy. All jobs passed on GitHub on 2026-11-11 (see [CURRENT.md](CURRENT.md)). It also runs on pushes to `feature/**`.
 
 ## Observability
 

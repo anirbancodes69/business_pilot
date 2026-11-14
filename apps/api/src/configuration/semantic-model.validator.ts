@@ -4,6 +4,9 @@ import { z } from 'zod';
 // A test compares the property names with the JSON Schema so the two cannot drift silently.
 
 const id = z.string().regex(/^[a-z][a-z0-9_]*$/);
+// Physical column names. The plan compiler (M6) turns these into SQL identifiers, so nothing but a
+// plain lower-case identifier is ever stored (PostgreSQL's 63-character limit).
+const column = z.string().regex(/^[a-z][a-z0-9_]{0,62}$/);
 const dimensionId = z.string().regex(/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/);
 const text = z.string().min(1).max(500);
 const synonyms = z.array(text).max(50);
@@ -19,7 +22,7 @@ const entity = z.strictObject({
 const relationship = z.strictObject({
   from: id,
   to: id,
-  on: z.array(z.tuple([z.string().min(1), z.string().min(1)])).min(1),
+  on: z.array(z.tuple([column, column])).min(1),
   cardinality: z.enum(['many_to_one', 'one_to_many', 'one_to_one']),
 });
 
@@ -29,14 +32,14 @@ const measure = z.strictObject({
   description: z.string().max(2000).optional(),
   entity: id,
   aggregation: z.enum(['sum', 'count', 'count_distinct', 'avg', 'min', 'max', 'ratio', 'custom']),
-  attribute: z.string().min(1).optional(),
+  attribute: column.optional(),
   numerator: id.optional(),
   denominator: id.optional(),
   expression_ref: z.string().min(1).optional(),
   filters: z
     .array(
       z.object({
-        attribute: z.string().min(1),
+        attribute: column,
         operator: z.enum(['eq', 'neq', 'in', 'not_in', 'is_null', 'is_not_null']),
         values: z.array(z.unknown()),
       }),
@@ -63,7 +66,7 @@ const dimension = z.strictObject({
   id: dimensionId,
   label: text,
   entity: id,
-  attribute: z.string().min(1),
+  attribute: column,
   type: z.enum(['categorical', 'time', 'numeric', 'boolean']),
   synonyms: synonyms.optional(),
   tags: z.array(z.enum(['pii', 'sensitive'])).optional(),

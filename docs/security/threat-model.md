@@ -24,7 +24,7 @@ Tenant business data (synced records, results), connector credentials, LLM provi
 | Generated SQL injection or exfiltration | Tampering | No raw SQL. Allow-listed compiler, parameters, read-only transactions |
 | Forged internal calls to api tools | Spoofing | Service authentication + signed short-lived RequestContext; ai-engine not public |
 | Credential theft from the database | Information disclosure | Envelope encryption, a KMS-held key-encryption key, credentials never returned |
-| SSRF through connector host configuration | Tampering | Block private, link-local and metadata IP ranges for SaaS sources. Egress allow-list |
+| SSRF through connector host configuration | Tampering | Block private, link-local and metadata IP ranges for SaaS sources. Egress allow-list. The check is made on the parsed address bytes, never on the text, and IPv6 is allow-listed to global unicast, with embedded IPv4 addresses (mapped, 6to4) judged as IPv4 (`apps/api/src/connectors/egress.ts`) |
 | A malicious spreadsheet (formula injection, zip bomb, oversized file) | DoS / tampering | Size and cell limits, parse values only (no formula evaluation), a sandboxed parser, CSV-injection-safe exports |
 | An LLM provider retains or trains on data | Information disclosure | Minimized payloads, PII masking, contractual terms (D-OPEN-14) |
 | Cost exhaustion through heavy questions | DoS | Quotas, tool-call caps, timeouts, per-tenant rate limits |

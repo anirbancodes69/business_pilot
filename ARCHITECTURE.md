@@ -1,6 +1,6 @@
 # ARCHITECTURE.md — System architecture
 
-This is the top-level view. Detailed designs are linked from each section. Decision statuses (Accepted, Proposed, OPEN) are tracked in [DECISIONS.md](DECISIONS.md). Nothing described here is implemented yet; see [CURRENT.md](CURRENT.md).
+This is the top-level view. Detailed designs are linked from each section. Decision statuses (Accepted, Proposed, OPEN) are tracked in [DECISIONS.md](DECISIONS.md). This document describes the target design; only part of it is built. [CURRENT.md](CURRENT.md) says what exists.
 
 ## 1. Principles
 

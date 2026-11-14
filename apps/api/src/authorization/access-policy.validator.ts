@@ -42,16 +42,50 @@ export const accessPolicySchema = z.strictObject({
 });
 export type AccessPolicy = z.infer<typeof accessPolicySchema>;
 
+/**
+ * Permissions an access policy may never hand out. They control who administers the tenant and who
+ * gives the human approval required by D-10, so they come only from a role assignment, which is
+ * audited separately (membership.roles_changed).
+ */
+export const RESTRICTED_POLICY_PERMISSIONS: readonly string[] = [
+  'tenant:manage',
+  'user:manage',
+  'data_source:manage',
+  'mapping:approve',
+  'semantic_model:manage',
+  'semantic_model:publish',
+];
+
+const DATA_GRANT = /^(entity|measure|dimension):/;
+
+/** Data grants go through `entities`, `measures` and `dimensions`, which are checked against the model. */
+export function isPolicyGrantable(permission: string): boolean {
+  return !RESTRICTED_POLICY_PERMISSIONS.includes(permission) && !DATA_GRANT.test(permission);
+}
+
 interface ModelRefs {
   entities: { id: string }[];
   measures: { id: string }[];
   dimensions: { id: string }[];
 }
 
-/** Structural checks, plus references against the published semantic model and the known roles. */
+export interface PolicyRefs {
+  model: ModelRefs;
+  roleKeys: string[];
+  /** The permission catalog (core.permission). */
+  permissionKeys: string[];
+  /** Columns known for each entity of the published model (see configuration/entity-columns.ts). */
+  entityColumns: Map<string, Set<string>>;
+}
+
+/**
+ * Structural checks, plus references against the published semantic model, the known roles, the
+ * permission catalog and the entity columns. A rule that names an unknown column is rejected: a
+ * mask or row filter on a misspelt column would otherwise protect nothing while looking valid.
+ */
 export function validateAccessPolicy(
   input: unknown,
-  refs?: { model: ModelRefs; roleKeys: string[] },
+  refs?: PolicyRefs,
 ): { policy?: AccessPolicy; problems: string[] } {
   const parsed = accessPolicySchema.safeParse(input);
   if (!parsed.success)
@@ -67,19 +101,31 @@ export function validateAccessPolicy(
       dimensions: new Set(refs.model.dimensions.map((d) => d.id)),
     };
     const roles = new Set(refs.roleKeys);
+    const permissions = new Set(refs.permissionKeys);
     for (const g of p.role_grants) {
       if (!roles.has(g.role)) problems.push(`unknown role: ${g.role}`);
       for (const kind of ['entities', 'measures', 'dimensions'] as const)
         for (const id of g[kind] ?? [])
           if (id !== '*' && !known[kind].has(id)) problems.push(`${g.role}: unknown ${kind} ${id}`);
+      for (const perm of g.permissions ?? []) {
+        if (DATA_GRANT.test(perm))
+          problems.push(`${g.role}: grant data through entities, measures or dimensions`);
+        else if (RESTRICTED_POLICY_PERMISSIONS.includes(perm))
+          problems.push(`${g.role}: permission ${perm} cannot be granted by a policy`);
+        else if (!permissions.has(perm)) problems.push(`${g.role}: unknown permission ${perm}`);
+      }
     }
+    const columnProblem = (what: string, entity: string, attribute: string): void => {
+      if (!known.entities.has(entity)) problems.push(`${what}: unknown entity ${entity}`);
+      else if (!refs.entityColumns.get(entity)?.has(attribute))
+        problems.push(`${what}: unknown attribute ${entity}.${attribute}`);
+    };
     for (const r of p.row_rules ?? []) {
       for (const role of r.applies_to_roles)
         if (!roles.has(role)) problems.push(`row rule: unknown role ${role}`);
-      if (!known.entities.has(r.entity)) problems.push(`row rule: unknown entity ${r.entity}`);
+      columnProblem('row rule', r.entity, r.attribute);
     }
-    for (const c of p.column_rules ?? [])
-      if (!known.entities.has(c.entity)) problems.push(`column rule: unknown entity ${c.entity}`);
+    for (const c of p.column_rules ?? []) columnProblem('column rule', c.entity, c.attribute);
   }
   return problems.length ? { problems } : { policy: p, problems };
 }

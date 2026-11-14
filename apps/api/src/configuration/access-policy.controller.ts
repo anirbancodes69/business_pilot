@@ -18,6 +18,7 @@ import { PermissionGuard, RequirePermission } from '../authorization/permissions
 import { AuthGuard, TenantGuard } from '../identity/auth.guard';
 import type { AuthedRequest } from '../identity/auth.types';
 import { DatabaseService, type Tx } from '../platform/database/database.module';
+import { entityColumns } from './entity-columns';
 import { validateSemanticModel } from './semantic-model.validator';
 import { TEMPLATES_POLICY } from './templates/wholesale-distribution';
 
@@ -36,7 +37,10 @@ export class AccessPolicyController {
     @Inject(AuditService) private readonly audit: AuditService,
   ) {}
 
-  /** References are checked against the published model and the roles visible to this tenant. */
+  /**
+   * References are checked against the published model, the roles visible to this tenant, the
+   * permission catalog and the columns known for each entity.
+   */
   private async refs(tx: Tx, tenantId: string) {
     const modelRow = await tx
       .selectFrom('core.semantic_model')
@@ -47,7 +51,13 @@ export class AccessPolicyController {
     const model = modelRow ? validateSemanticModel(modelRow.document).document : undefined;
     if (!model) throw new ConflictException('publish a semantic model first');
     const roles = await tx.selectFrom('core.role').select('key').execute();
-    return { model, roleKeys: roles.map((r) => r.key) };
+    const permissions = await tx.selectFrom('core.permission').select('key').execute();
+    return {
+      model,
+      roleKeys: roles.map((r) => r.key),
+      permissionKeys: permissions.map((p) => p.key),
+      entityColumns: entityColumns(model),
+    };
   }
 
   private async createDraft(tx: Tx, tenantId: string, userId: string, body: unknown) {
